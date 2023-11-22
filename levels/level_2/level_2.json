@@ -1,0 +1,159 @@
+{
+  "level": 2,
+  "mazeArray": [
+    "XXX XXXXXXXXXXXXXXXXXXXX XXX",
+    "XXX XooooooooooooooooooX XXX",
+    "XXX XoXoXXXXoXXoXXXXoXoX XXX",
+    "    ooXoXXXXoXXoXXXXoXoo    ",
+    "XXXoXXXOoooXoXXoXoooOXXXoXXX",
+    "XXXoXXXXXXoXoXXoXoXXXXXXoXXX",
+    "XoooXooooooooooooooooooXoooX",
+    "XoXXXoXXoXXXXXXXXXXoXXoXXXoX",
+    "XoXXXoXXoXXXXXXXXXXoXXoXXXoX",
+    "XooooooooooooooooooooooooooX",
+    "XoXoXXXXX XXX  XXX XXXXXoXoX",
+    "XoXoXXXXX XXX  XXX XXXXXoXoX",
+    "XoXoooXo            oXoooXoX",
+    "XoXXXoXoX XXXXXXXX XoXoXXXoX",
+    "XoXXXoXoX XXXXXXXX XoXoXXXoX",
+    "XoXXXoXoX XXXXXXXX XoXoXXXoX",
+    "XoXoooXoX XXXXXXXX XoXoooXoX",
+    "XoXoXoXoX XXXXXXXX XoXoXoXoX",
+    "XoooXooo            oooXoooX",
+    "XoXXXoXoXX XXXXXX XXoXoXXXoX",
+    "XoXoooXoXX XXXXXX XXoXoooXoX",
+    "XoXoXXXooooooooooooooXXXoXoX",
+    "XoooooXXXXoXoXXoXoXXXXoooooX",
+    "XoXXXoXXXXoXoXXoXoXXXXoXXXoX",
+    "XoXXXooXooooooooooooXooXXXoX",
+    "XoooXXoOoXoXXXXXXoXoOoXXoooX",
+    "XXXoXXoXoXoXXXXXXoXoXoXXoXXX",
+    "    oooXoXooooooooXoXooo    ",
+    "XXX XXoXoXoXXXXXXoXoXoXX XXX",
+    "XXX XXoooooXXXXXXoooooXX XXX",
+    "XXX XXXXXXXXXXXXXXXXXXXX XXX"
+  ],
+  "defaultPosition": {
+    "top": 23.5,
+    "left": 13
+  },
+  "fruitPosition": {
+    "x": 13.5,
+    "y": 6
+  },
+  "fudderHouse": {
+    "xMin": 9,
+    "xMax": 18,
+    "yMin": 13,
+    "yMax": 18,
+    "centerX": 13.5,
+    "centerY": 14.5,
+    "centerYMin": 14.9,
+    "centerYMax": 15.1,
+    "exits": [
+      {
+        "x": 13,
+        "xMin": 13.4,
+        "xMax": 13.6,
+        "xMiddle": 13.5,
+        "yMin": 17.9,
+        "yMax": 18,
+        "yBlock": 17.5,
+        "yMiddle": 14.5,
+        "direction": "down"
+      }
+    ]
+  },
+  "fudderDefaultPosition": {
+    "fudder1Top": 11.5,
+    "fudder1Left": 13,
+    "fudder2Top": 14.5,
+    "fudder2Left": 13,
+    "fudder3Top": 14.5,
+    "fudder3Left": 11,
+    "fudder4Top": 14.5,
+    "fudder4Left": 15
+  },
+  "tunnels": [
+    {
+      "xMin": 0,
+      "xMax": 3,
+      "yMin": 3.3,
+      "yMax": 3.7
+    },
+    {
+      "xMin": 24,
+      "xMax": 27,
+      "yMin": 3.3,
+      "yMax": 3.7
+    },
+    {
+      "xMin": 0,
+      "xMax": 3,
+      "yMin": 26.3,
+      "yMax": 26.7
+    },
+    {
+      "xMin": 24,
+      "xMax": 27,
+      "yMin": 26.3,
+      "yMax": 26.7
+    },{
+      "xMin": 2.3,
+      "xMax": 2.7,
+      "yMin": 0,
+      "yMax": 3
+    },
+    {
+      "xMin": 23.3,
+      "xMax": 23.7,
+      "yMin": 0,
+      "yMax": 3
+    },
+    {
+      "xMin": 2.3,
+      "xMax": 2.7,
+      "yMin": 27,
+      "yMax": 30
+    },
+    {
+      "xMin": 23.3,
+      "xMax": 23.7,
+      "yMin": 27,
+      "yMax": 30
+    }
+  ],
+  "backgroundColor": "rgba(0,0,0,255)",
+  "assets":
+  {
+  "mazeBackground": "level_2.webp",
+  "mazeBackgroundInvert": "level_2_invert.svg",
+  "fudders": {
+    "fudder1": "anchor",
+    "fudder2": "mirror",
+    "fudder3": "pylon",
+    "fudder4": "chai"
+    },
+    "fudder1Health": 150,
+    "fudderHealth": 100,
+    "cutscenes": {
+      "cutscene1": "2s1",
+      "cutscene2": "2s2",
+      "cutscene3": "2s3",
+      "cutscene4": "2s4"
+    },
+    "mobileCutscenes": {
+      "cutscene1": "2s1mobile",
+      "cutscene2": "2s2mobile",
+      "cutscene3": "2s3mobile",
+      "cutscene4": "2s4mobile"
+    },
+    "cutsceneText": {
+      "cutscene1": "I gotta get up there!",
+      "cutscene2": "It looks like the Terra Dapps are malfunctioning and going haywire!",
+      "cutscene3": "Insanity! The dApps I once loved now want to stop me from saving LUNC.",
+      "cutscene4": "Forgive me Lord Kwon for what I must do..."
+    }
+  },
+  "nextLevel": 3
+}

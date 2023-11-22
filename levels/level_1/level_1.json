@@ -1,0 +1,127 @@
+{
+  "level": 1,
+  "mazeArray": [
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XooooooooooooXXooooooooooooX",
+    "XoXXXXoXXXXXoXXoXXXXXoXXXXoX",
+    "XOXXXXoXXXXXoXXoXXXXXoXXXXOX",
+    "XoXXXXoXXXXXoXXoXXXXXoXXXXoX",
+    "XooooooooooooooooooooooooooX",
+    "XoXXXXoXXoXXXXXXXXoXXoXXXXoX",
+    "XoXXXXoXXoXXXXXXXXoXXoXXXXoX",
+    "XooooooXXooooXXooooXXooooooX",
+    "XXXXXXoXXXXX XX XXXXXoXXXXXX",
+    "XXXXXXoXXXXX XX XXXXXoXXXXXX",
+    "XXXXXXoXX          XXoXXXXXX",
+    "XXXXXXoXX XXXXXXXX XXoXXXXXX",
+    "XXXXXXoXX X      X XXoXXXXXX",
+    "      o   X      X   o      ",
+    "XXXXXXoXX X      X XXoXXXXXX",
+    "XXXXXXoXX XXXXXXXX XXoXXXXXX",
+    "XXXXXXoXX          XXoXXXXXX",
+    "XXXXXXoXX XXXXXXXX XXoXXXXXX",
+    "XXXXXXoXX XXXXXXXX XXoXXXXXX",
+    "XooooooooooooXXooooooooooooX",
+    "XoXXXXoXXXXXoXXoXXXXXoXXXXoX",
+    "XoXXXXoXXXXXoXXoXXXXXoXXXXoX",
+    "XOooXXooooooooooooooooXXooOX",
+    "XXXoXXoXXoXXXXXXXXoXXoXXoXXX",
+    "XXXoXXoXXoXXXXXXXXoXXoXXoXXX",
+    "XooooooXXooooXXooooXXooooooX",
+    "XoXXXXXXXXXXoXXoXXXXXXXXXXoX",
+    "XoXXXXXXXXXXoXXoXXXXXXXXXXoX",
+    "XooooooooooooooooooooooooooX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  ],
+  "defaultPosition": {
+    "top": 22.5,
+    "left": 13
+  },
+  "fruitPosition": {
+    "x": 13.5,
+    "y": 17
+  },
+  "fudderHouse": {
+    "xMin": 9,
+    "xMax": 18,
+    "yMin": 11,
+    "yMax": 17,
+    "centerX": 13.5,
+    "centerY": 13.5,
+    "centerYMin": 13.9,
+    "centerYMax": 14.1,
+    "exits": [
+      {
+        "x": 13,
+        "xMin": 13.4,
+        "xMax": 13.6,
+        "xMiddle": 13.5,
+        "yMin": 10.9,
+        "yMax": 11,
+        "yBlock": 10.5,
+        "yMiddle": 14.5,
+        "direction": "up"
+      }
+    ]
+  },
+  "fudderDefaultPosition": {
+    "fudder1Top": 10.5,
+    "fudder1Left": 13,
+    "fudder2Top": 13.5,
+    "fudder2Left": 13,
+    "fudder3Top": 13.5,
+    "fudder3Left": 11,
+    "fudder4Top": 13.5,
+    "fudder4Left": 15
+  },
+  "tunnels": [
+    {
+      "xMin": 0,
+      "xMax": 6,
+      "yMin": 13.8,
+      "yMax": 14.2
+    },
+    {
+      "xMin": 21,
+      "xMax": 27,
+      "yMin": 13.8,
+      "yMax": 14.2
+    }
+  ],
+  "backgroundColor": "rgba(186,55,55,255)",
+  "nextLevel": 2,
+  "assets":
+    {
+    "mazeBackground": "level_1.webp",
+    "mazeBackgroundInvert": "level_1_invert.svg",
+    "fudders": {
+      "fudder1": "roach",
+      "fudder2": "roach2",
+      "fudder3": "roach3",
+      "fudder4": "roach4"
+      },
+      "fudder1Health": 150,
+      "fudderHealth": 100,
+      "cutscenes": {
+        "cutscene1": "astroport_antics",
+        "cutscene2": "1s1",
+        "cutscene3": "1s2",
+        "cutscene4": "1s3",
+        "cutscene5": "1s4"
+      },
+      "mobileCutscenes": {
+        "cutscene1": "1s0mobile",
+        "cutscene2": "1s1mobile",
+        "cutscene3": "1s2mobile",
+        "cutscene4": "1s3mobile",
+        "cutscene5": "1s4mobile"
+      },
+      "cutsceneText": {
+        "cutscene1": "...",
+        "cutscene2": "Huh... what's going on?",
+        "cutscene3": "Looks like someone's attacking the LUNC mothership!",
+        "cutscene4": "Cockroaches: Give it up LUNCMAN, your precious LUNC is destined to fail.",
+        "cutscene5": "You'll never stop the power of LUNC you motherFudders!"
+      }
+    }
+}

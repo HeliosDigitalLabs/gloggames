@@ -1,0 +1,118 @@
+{
+    "videoWidth": 4550,
+    "videoHeight": 1080,
+    "imgBase": "./js/background/",
+    "videos": [
+      {
+        "path": "./js/background/load_static",
+        "loop": true,
+        "preload": false,
+        "transitions": {
+          "home": "load_main",
+          "leaderboard": "load_leaderboard",
+          "luncman": "load_luncman",
+          "nft": "load_nft",
+          "mint": "load_nft",
+          "marketplace": "load_nft"
+        },
+        "setElements": false
+      },
+      {
+        "path": "./js/background/load_main",
+        "loop": false,
+        "preload": true,
+        "transitions": ["home"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/load_nft",
+        "loop": false,
+        "preload": true,
+        "transitions": ["main_nft"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/load_leaderboard",
+        "loop": false,
+        "preload": true,
+        "transitions": ["main_lb"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/load_luncman",
+        "loop": false,
+        "preload": true,
+        "transitions": ["main_static"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/home",
+        "loop": true,
+        "preload": true,
+        "transitions": ["main_credit", "main_play"],
+        "setElements": true
+      },
+      {
+        "path": "./js/background/main_static",
+        "loop": true,
+        "preload": true,
+        "transitions": ["main_credit", "main_play"],
+        "setElements": true
+      },
+      {
+        "path": "./js/background/main_credit",
+        "loop": false,
+        "preload": true,
+        "transitions": ["credit_static"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/credit_static",
+        "loop": true,
+        "preload": true,
+        "transitions": ["credit_main"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/credit_main",
+        "loop": false,
+        "preload": false,
+        "transitions": ["main_static"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/main_play",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/play_main",
+        "loop": false,
+        "preload": false,
+        "transitions": ["main_static"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/main_nft",
+        "loop": true,
+        "preload": true,
+        "transitions": ["main_static", "home"],
+        "setElements": true
+      },
+      {
+        "path": "./js/background/main_lb",
+        "loop": true,
+        "preload": true,
+        "transitions": ["main_static", "home"],
+        "setElements": true
+      }
+    ],
+    "screenWidth": 1192,
+    "screenHeight": 900,
+    "navbarWidth": 338,
+    "navbarHeight": 312,
+    "minTop": 38
+  }
+  

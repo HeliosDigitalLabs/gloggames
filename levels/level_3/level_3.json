@@ -1,0 +1,136 @@
+{
+  "level": 3,
+  "mazeArray": [
+    "XX XXXXXXXXXXXXXXXXXXXXXX XX",
+    "XX XXXXXXooooooooooXXXXXX XX",
+    "XX XXXXXooXXoXXoXXooXXXXX XX",
+    "XX XXXXoOXXXoXXoXXXOoXXXX XX",
+    "XoooooXoXXXXoXXoXXXXoXoooooX",
+    "XoXXXoXoXXoooXXoooXXoXoXXXoX",
+    "XoXXXoXoXX XXXXXX XXoXoXXXoX",
+    "XoXXXoXoX          XoXoXXXoX",
+    "XoooooXoX XXXXXXXX XoXoooooX",
+    "XoXXoXXoX X      X XoXXoXXoX",
+    "XoXXoXooX X      X XooXoXXoX",
+    "XoXXoXoXX X      X XXoXoXXoX",
+    "XooooooXX XXXXXXXX XXooooooX",
+    "XXXXoXoXo          oXoXoXXXX",
+    "XXXooXoXoXX  XX  XXoXoXooXXX",
+    "XXXoXooXoXXX XX XXXoXooXoXXX",
+    "XXXoXoXXoXXooooooXXoXXoXoXXX",
+    "XXXoXoXXoXXoXXXXoXXoXXoXoXXX",
+    "XXXoXoXXoXXoXXXXoXXoXXoXoXXX",
+    "XXooOoXXoXXoXXXXoXXoXXoOooXX",
+    "XXoXXoXXoXooooooooXoXXoXXoXX",
+    "XXoXooXXoXoXXXXXXoXoXXooXoXX",
+    "XXoXoXXXoXoXXXXXXoXoXXXoXoXX",
+    "XXoXoXXXoXoXXXXXXoXoXXXoXoXX",
+    "XooooooooooooooooooooooooooX",
+    "XoXXXXXXXXXXXXXXXXXXXXXXXXoX",
+    "XoXXXXXXXXXXXXXXXXXXXXXXXXoX",
+    "XooooXXXXXXXXXXXXXXXXXXooooX",
+    "XX XooooooXXXXXXXXooooooX XX",
+    "XX XXXXXXooooooooooXXXXXX XX",
+    "XX XXXXXXXXXXXXXXXXXXXXXX XX"
+  ],
+  "defaultPosition": {
+    "top": ,
+    "left": 13
+  },
+  "fruitPosition": {
+    "x": 13.5,
+    "y": 7
+  },
+  "fudderHouse": {
+    "xMin": 9,
+    "xMax": 18,
+    "yMin": 7,
+    "yMax": 13,
+    "centerX": 13.5,
+    "centerYMin": 9.9,
+    "centerYMax": 10.1,
+    "centerY": 9.5,
+    "exits": [
+      {
+        "x": 13,
+        "xMin": 13.4,
+        "xMax": 13.6,
+        "xMiddle": 13.5,
+        "yMin": 6.9,
+        "yMax": 7,
+        "yBlock": 6.5,
+        "yMiddle": 9.5,
+        "direction": "up"
+      }
+    ]
+  },
+  "fudderDefaultPosition": {
+    "fudder1Top": 7.5,
+    "fudder1Left": 13,
+    "fudder2Top": 9.5,
+    "fudder2Left": 13,
+    "fudder3Top": 9.5,
+    "fudder3Left": 11,
+    "fudder4Top": 9.5,
+    "fudder4Left": 15
+  },
+  "tunnels": [
+    {
+      "xMin": 1.8,
+      "xMax": 2.2,
+      "yMin": 0,
+      "yMax": 3
+    },
+    {
+      "xMin": 24.8,
+      "xMax": 25.2,
+      "yMin": 0,
+      "yMax": 3
+    },
+    {
+      "xMin": 1.8,
+      "xMax": 2.2,
+      "yMin": 28,
+      "yMax": 30
+    },
+    {
+      "xMin": 24.8,
+      "xMax": 25.2,
+      "yMin": 28,
+      "yMax": 30
+    }
+  ],
+  "backgroundColor": "rgba(0,0,0,255)",
+  "assets":
+  {
+  "mazeBackground": "level_3.webp",
+  "mazeBackgroundInvert": "level_3_invert.svg",
+  "fudders": {
+    "fudder1": "algod",
+    "fudder2": "fatman",
+    "fudder3": "gcr",
+    "fudder4": "bearica"
+    },
+    "fudder1Health": 150,
+    "fudderHealth": 100,
+    "cutscenes": {
+      "cutscene1": "3s1",
+      "cutscene2": "3s2",
+      "cutscene3": "3s3",
+      "cutscene4": "3s4"
+    },
+    "mobileCutscenes": {
+      "cutscene1": "3s1mobile",
+      "cutscene2": "3s2mobile",
+      "cutscene3": "3s3mobile",
+      "cutscene4": "3s4mobile"
+    },
+    "cutsceneText": {
+      "cutscene1": "Looks like some major dumping going on at Astroport.",
+      "cutscene2": "Looks like I was right. I must stop them!",
+      "cutscene3": "Yes it us, the Fantastic Fudders. We've come to do no harm, just sell to willing buyers at the current far market value price.",
+      "cutscene4": "Selling LUNC? You must be taking financial advice from a Magic 8-Ball."
+    }
+  },
+  "nextLevel": 4
+}

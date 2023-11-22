@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!-- Global site tag (gtag.js) - Google Analytics 
+    <script async src='https://www.googletagmanager.com/gtag/js?id=UA-142539004-1'></script> -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/client.js"></script>
+    <script>
+          window.client = new Client();
+          
+          console.log('client:', window.client);
+    </script>
+    <script src="js/router.js"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'UA-142539004-1');
+    </script>
+    <link rel='stylesheet' href='/css/app.css' />
+    <link rel='shortcut icon' type='image/x-icon' href='/style/graphics/favicon.ico'>
+    <link href='https://fonts.googleapis.com/css?family=Press+Start+2P&display=swap' rel='stylesheet'>
+    <link href='https://fonts.googleapis.com/icon?family=Material+Icons'
+      rel='stylesheet'>
+    <link href="https://fonts.googleapis.com/css2?family=Gabarito&display=swap" rel="stylesheet">
+    </head>
+    <title>Luncman</title>
+    <meta name="viewport" content="user-scalable=no, maximum-scale=1, minimum-scale=1, width=device-width, initial-scale=1">
+    <link rel="preload" href="/style/scss/retro_cover.webp" as="image">
+  </head>
+
+  <body>
+    <div id='landscape-cover' class='landscape-cover'></div>
+    <div id='content-wrapper'>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Flip.min.js"></script>      
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+    <script src="js/home.js" defer></script> 
+    <script src="js/nft.js" defer></script>
+    <script src="js/leaderboard.js" defer></script>
+
+    <div id="retro-cover">
+
+    </div>
+      <div id="content-container">
+
+        <div id="luncman-div">
+        <svg viewBox="0 0 300 200" xmlns='http://www.w3.org/2000/svg'>
+          <defs>
+            <filter id='screen-noise'>
+              <feTurbulence type='turbulence' result='noise' baseFrequency='0.2' numOctaves='0' seed='2' stitchTiles='noStitch' />
+              <feOffset dy="0" dx="0">
+                <animate attributeName="dy" values="0;-20" dur=".1s" repeatCount="indefinite" />
+                <animate attributeName="dx" values="0;20" dur=".3s" repeatCount="indefinite" />
+              </feOffset>
+              <feComponentTransfer>
+                <feFuncR type="linear" slope="1" intercept="-0.4" />
+                <feFuncG type="linear" slope="1" intercept="-0.4" />
+                <feFuncB type="linear" slope="1" intercept="-0.4" />
+              </feComponentTransfer>
+              <feBlend in="SourceGraphic" in2="noiseElement" mode="multiply" result="screen-content" />
+              <feTurbulence baseFrequency="0.01 1" result="waves" numOctaves="2" />
+              <feDisplacementMap in="screen-content" in2="waves" scale="2" xChannelSelector="R" yChannelSelector="R">
+                <animate attributeName="scale" values="0;10;0;50;5" dur="9s" repeatCount="indefinite" />
+              </feDisplacementMap>
+            </filter>
+            <filter id="Glow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="6 2" result="glow" />
+              <feMerge>
+                <feMergeNode in="glow" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <rect height="100%" width="100%" fill="url(#Grid)" filter="url(#Glow)" />
+          <a id="luncman-link" className="luncman-link">
+            <text x="50%" y="10%" dy=".35em" text-anchor="middle" id="luncman-text">
+              LUNCMAN
+            </text>
+          </a>
+          <animateTransform attributeType="xml" attributeName="transform" type="translate" values="0,0;0,1.5;0,-.5;0,0;0,2;0,0;0,-1" dur="4s" repeatCount="indefinite" />
+        </svg>
+      </div>
+
+      <div id='overflow-mask' class='overflow-mask'>
+        <!-- <img id='backdrop' class='backdrop' src='/style/graphics/backdrop.png'> -->
+        <div id='fps-display' class='fps-display'></div>
+        <div id='preload-div' class='preload-div'></div>
+        <div id='main-menu-container' class='main-menu-container'>
+          <div id="canvas"></div>
+        </div>
+
+        <!-- other content pages-->
+        <div id="credits-section" style="display: none;">CREDITS CONTENT</div>
+        <div id="nfts-section" style="display: none;">NFTS CONTENT</div>
+        <div id="leaderboard-section" style="display: none;">LEADERBOARD CONTENT</div>
+        <div id="about-section" style="display: none;">ABOUT CONTENT</div>
+        <div id='game-start'></div>
+
+        
+        <!-- header buttons-->
+        <div id='header-buttons' class='header-buttons'>
+          <button>
+            <i id='pause-button' class='material-icons'>
+              pause
+            </i>
+          </button>
+          <button>
+            <i id='sound-button' class='material-icons'></i>
+          </button>
+        </div>
+
+        <div id='paused-text' class='paused-text'>
+          PAUSED
+        </div>
+
+        <div id='game-ui' class='game-ui'>
+          <div id='left-HUD' class='left-HUD'>
+            <div id='name-display'></div>
+            <img class='pfp' id='pfp' src='/js/background/Luncman.png' />
+            <div class='column _25' id="column_25">
+              <div class='one-up'>1UP</div>
+              <div id='points-display'></div>
+            </div>
+            <div class='column _50' id="column_50">
+              <div id='high-score-text'>HIGH SCORE</div>
+              <div id='high-score-display'></div>
+            </div>
+            <!-- <div class='luncb'>LUNC "Burned": 192932</div> -->
+          </div>
+
+          <div id='row-top' class='row top'>
+          </div>
+
+          <div id='maze' class='maze'>
+            <img id='maze-img' class='maze-img'>
+            <div id='maze-cover' class='maze-cover'></div>
+            <div id='dot-container'></div>
+            <p id='luncman' class='luncman'></p>
+            <p id='luncman-arrow' class='luncman'></p>
+            <p id='fudder4' class='ghost'></p>
+            <p id='fudder3' class='ghost'></p>
+            <p id='fudder2' class='ghost'></p>
+            <p id='fudder1' class='ghost'></p>
+          </div>
+
+          <div id='bottom-row' class='bottom-row'>
+            <div id='extra-lives' class='extra-lives'></div>
+            <div id='fruit-display' class='fruit-display'></div>
+          </div>
+
+          
+          <div id='right-HUD' class='right-HUD'>
+            <div id='level_HUD' class='level_HUD'></div>
+            <div class='mobile-fud-container' id='mobile-fud-container'>
+            <div class='FHUD'>
+              <div class='fudder-info'>
+                <div id='fudder-1' class='fudder-name'></div>
+                <div class="fudder-image" id="fudder-image-1"></div>
+              </div>
+              <div class="healthbar">
+                <div class="health-bar-fill" id="fudder1-health-bar"></div>
+              </div>
+            </div>   
+            <div class='FHUD'>
+              <div class='fudder-info'>
+                <div id='fudder-2' class='fudder-name'></div>
+                <div class="fudder-image" id="fudder-image-2"></div>
+              </div>
+              <div class="healthbar">
+                <div class="health-bar-fill" id="fudder2-health-bar"></div>
+              </div>
+            </div> 
+            <div class='FHUD'>
+              <div class='fudder-info'>
+                <div id='fudder-3' class='fudder-name'></div>
+                <div class="fudder-image" id="fudder-image-3"></div>
+              </div>
+              <div class="healthbar">
+                <div class="health-bar-fill" id="fudder3-health-bar"></div>
+              </div>
+            </div> 
+            <div class='FHUD'>
+              <div class='fudder-info'>
+                <div id='fudder-4' class='fudder-name'></div>
+                <div class="fudder-image" id="fudder-image-4"></div>
+              </div>
+              <div class="healthbar">
+                <div class="health-bar-fill" id="fudder4-health-bar"></div>
+              </div>
+            </div> 
+            </div>
+          </div>     
+
+        <div id='left-cover' class='loading-cover left'></div>
+        <div id='right-cover' class='loading-cover right'></div>
+        <div id='loading-container' class='loading-container'>
+          <div id='loading-luncman' class='loading-luncman'></div>
+          <div id='loading-dot-mask' class='loading-dot-mask'></div>
+          <div class='loading-dot _5'></div>
+          <div class='loading-dot _10'></div>
+          <div class='loading-dot _15'></div>
+          <div class='loading-dot _20'></div>
+          <div class='loading-dot _25'></div>
+          <div class='loading-dot _30'></div>
+          <div class='loading-dot _35'></div>
+          <div class='loading-dot _40'></div>
+          <div class='loading-dot _45'></div>
+          <div class='loading-dot _50'></div>
+          <div class='loading-dot _55'></div>
+          <div class='loading-dot _60'></div>
+          <div class='loading-dot _65'></div>
+          <div class='loading-dot _70'></div>
+          <div class='loading-dot _75'></div>
+          <div class='loading-dot _80'></div>
+          <div class='loading-dot _85'></div>
+          <div class='loading-dot _90'></div>
+          <div class='loading-dot _95'></div>
+        </div>
+
+        <div id='error-message' class='error-message'>
+          <div class='header'>
+            <div>OOPS!</div>
+            <div class='error-luncman'></div>
+          </div>
+          <div class='body'>
+            We were unable to load the images/sounds needed to play the game.</br></br>
+
+            This could be due to a poor connection, a strict network policy, or
+            by playing on an unsupported browser.
+          </div>
+        </div> 
+      </div>
+    </div>
+    <div id="root"></div>
+        <script src="js/app.js"></script>
+        <script src='js/luncman.js'></script>
+        <script crossorigin src="https://unpkg.com/@terra-money/feather.js/dist/bundle.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/dat.gui"></script>
+        <script src="build/static/js/2.6b5741a6.chunk.js"></script>
+        <script src="build/static/js/main.0db08a51.chunk.js"></script>
+        <script src="build/static/js/runtime-main.00a3aed7.js"></script>
+        <script src="js/mobile/mobile.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+        </div>
+        <!-- Credits Page -->
+        <div id="credit-section" class="creditSection">
+          <button id="close-credit-section">Back</button>
+        </div>
+    </div>
+
+    <script>
+      const landscapeCover = document.getElementById('landscape-cover');
+      const contentWrapper = document.getElementById('content-wrapper');
+      
+      window.addEventListener('orientationchange', function() {
+        if (Math.abs(window.orientation) === 90) {
+          // The device is in landscape mode.
+          landscapeCover.style.visibility = 'visible';
+          contentWrapper.style.display = 'none'; // hide the rest of the content
+          console.log('landscape cover visible');
+        } else {
+          // The device is in portrait mode.
+          landscapeCover.style.visibility = 'hidden';
+          contentWrapper.style.display = 'block'; // show the rest of the content
+          console.log('landscape cover hidden');
+        }
+      });
+  
+      // You may want to call the event handler once at the start to set the initial state correctly.
+      window.dispatchEvent(new Event('orientationchange'));
+    </script>
+  </body>
+</html>

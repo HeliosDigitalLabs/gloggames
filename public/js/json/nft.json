@@ -1,0 +1,24 @@
+{
+    "terra13478128945": [
+        "tokenurilink1.com",
+        "tokenurilink2.com",
+        "tokenurilink3.com",
+        "tokenurilink4.com",
+        "tokenurilink5.com"
+        
+    ],
+    "terra53902185238": [
+        "tokenurilink6.com",
+        "tokenurilink7.com",
+        "tokenurilink8.com",
+        "tokenurilink9.com",
+        "tokenurilink0.com"
+    ]
+}
+
+
+{
+    "tokens": {
+        "owner": "walletID"
+    }
+}

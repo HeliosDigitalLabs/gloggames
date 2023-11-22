@@ -1,0 +1,170 @@
+{
+  "level": 4,
+  "mazeArray": [
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "XXoooooooooooOXOooooooooooXX",
+    "  oXXXoXXoXXXoXoXXXoXXXoXo  ",
+    "XXoXXXoXXoXXXoXoXXXoXXXoXoXX",
+    "XXooXXoXXoXXXoXoXXXoXXXoooXX",
+    "XXXoXXoXXoXXXoXoXXooooooXXXX",
+    "XXXoXXoXXoooooXooooXXXXXXXXX",
+    "XXXoooooooXXXXXXXXXoooooXXXX",
+    "XXXoXXoXXoXXXXXXXXooXoXooXXX",
+    "XXXoXXoXXoXXXXXXXXoXXoXXoXXX",
+    "   oXXoXXoXXXXXXXXoXXoXXo   ",
+    "XXXooXoXXoXXXXXXXXoXXoXXoXXX",
+    "XXXXoXoXXoXXXXXXXXooooXXoXXX",
+    "XXXXooooooXXXXXXXXoXXoooooXX",
+    "XXXXXXXXXXXXXXXooooXXXoXXOoX",
+    "XXXXXooooXXXXXXoXXooXXoXXXoX",
+    "XXoooooXoXXXXXXoXXXoXXoooooX",
+    "XXoXXXoXoXXXXXXoXXXoXXoXXoXX",
+    "  oXXXoooooooXXoXXXoXXoXXo  ",
+    "XXoXXXXXoXXXOXXooooooooXXoXX",
+    "XooXXXXooooooXXXXXXoooXXXooX",
+    "XoXXXXXoXXXXXXXXXXXXXoXXXXoX",
+    "XoXXXoooXXXXXXXXXXXXXoooXXoX",
+    "XooXXoXXXXXXXXXXXXXXXoXoXooX",
+    "XXooooXXXXXXXXXXXXXXXoXoXoXX",
+    "XXoXXoooXXXXXXXXXXXXXoXoooXX",
+    "  oXXoXXXXXXXXXXXXXXXoooXo  ",
+    "XXooooXXXXXXXXXXXXXXXXXoooXX",
+    "XXXXXoooXXXXXXXXXXXXXoooXXXX",
+    "XXXXXXXoooooooooooooooXXXXXX",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  ],  
+  "defaultPosition": {
+    "top": 28.5,
+    "left": 13.5
+  },
+  "fruitPosition": {
+    "x": 7,
+    "y": 25
+  },
+  "fudderHouse": {
+    "xMin": 9,
+    "xMax": 18,
+    "yMin": 7,
+    "yMax": 13,
+    "centerX": 13.5,
+    "centerYMin": 9.9,
+    "centerYMax": 10.1,
+    "centerY": 9.5,
+    "exits": [
+      {
+        "x": 8.5,
+        "xMin": 8.9,
+        "xMax": 9,
+        "xMiddle": 13.5,
+        "yMin": 9.8,
+        "yMax": 10.2,
+        "yBlock": 10,
+        "yMiddle": 10,
+        "direction": "left"
+      },
+      {
+        "x": 17.5,
+        "xMin": 17.9,
+        "xMax": 18,
+        "xMiddle": 13.5,
+        "yMin": 9.8,
+        "yMax": 10.2,
+        "yBlock": 10,
+        "yMiddle": 10,
+        "direction": "right"
+      }
+    ]
+  },
+  "fudderDefaultPosition": {
+    "fudder1Top": 2.5,
+    "fudder1Left": 19,
+    "fudder2Top": 9.5,
+    "fudder2Left": 13,
+    "fudder3Top": 9.5,
+    "fudder3Left": 11,
+    "fudder4Top": 9.5,
+    "fudder4Left": 15
+  },
+  "tunnels": [
+    {
+      "xMin": 0,
+      "xMax": 1,
+      "yMin": 1.8,
+      "yMax": 2.2
+    },
+    {
+      "xMin": 26,
+      "xMax": 27,
+      "yMin": 1.8,
+      "yMax": 2.2
+    },
+    {
+      "xMin": 0,
+      "xMax": 2,
+      "yMin": 9.8,
+      "yMax": 10.2
+    },
+    {
+      "xMin": 25,
+      "xMax": 27,
+      "yMin": 9.8,
+      "yMax": 10.2
+    },{
+      "xMin": 0,
+      "xMax": 1,
+      "yMin": 17.8,
+      "yMax": 18.2
+    },
+    {
+      "xMin": 26,
+      "xMax": 27,
+      "yMin": 17.8,
+      "yMax": 18.2
+    },
+    {
+      "xMin": 0,
+      "xMax": 1,
+      "yMin": 25.8,
+      "yMax": 26.2
+    },
+    {
+      "xMin": 26,
+      "xMax": 27,
+      "yMin": 25.8,
+      "yMax": 26.2
+    }
+  ],
+  "backgroundColor": "rgba(0,0,0,255)",
+  "assets":
+  {
+  "mazeBackground": "level_4.webp",
+  "mazeBackgroundInvert": "level_4_invert.svg",
+  "fudders": {
+    "fudder1": "sbf",
+    "fudder2": "caroline",
+    "fudder3": "sam",
+    "fudder4": "ryan"
+    },
+    "fudder1Health": 150,
+    "fudderHealth": 100,
+    "cutscenes": {
+      "cutscene1": "4s1",
+      "cutscene2": "4s2",
+      "cutscene3": "4s3",
+      "cutscene4": "4s4"
+    },
+    "mobileCutscenes": {
+      "cutscene1": "4s1mobile",
+      "cutscene2": "4s2mobile",
+      "cutscene3": "4s3mobile",
+      "cutscene4": "4s4mobile"
+    },
+    "cutsceneText": {
+      "cutscene1": "...",
+      "cutscene2": "Who's dumping now?",
+      "cutscene3": "1) what",
+      "cutscene4": "I'll buy as much LUNC as you have, right now. Sell me all you want. Then go FUD off."
+    }
+  },
+  "nextLevel": 1
+}
