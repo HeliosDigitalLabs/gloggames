@@ -34,7 +34,7 @@
     "XX XXXXXXXXXXXXXXXXXXXXXX XX"
   ],
   "defaultPosition": {
-    "top": ,
+    "top": 19.5,
     "left": 13
   },
   "fruitPosition": {
@@ -111,13 +111,14 @@
     "fudder3": "gcr",
     "fudder4": "bearica"
     },
-    "fudder1Health": 150,
-    "fudderHealth": 100,
+    "fudder1Health": 250,
+    "fudderHealth": 150,
     "cutscenes": {
       "cutscene1": "3s1",
       "cutscene2": "3s2",
       "cutscene3": "3s3",
-      "cutscene4": "3s4"
+      "cutscene4": "3s4",
+      "cutscene5": "3s5"
     },
     "mobileCutscenes": {
       "cutscene1": "3s1mobile",
@@ -126,10 +127,11 @@
       "cutscene4": "3s4mobile"
     },
     "cutsceneText": {
-      "cutscene1": "Looks like some major dumping going on at Astroport.",
-      "cutscene2": "Looks like I was right. I must stop them!",
-      "cutscene3": "Yes it us, the Fantastic Fudders. We've come to do no harm, just sell to willing buyers at the current far market value price.",
-      "cutscene4": "Selling LUNC? You must be taking financial advice from a Magic 8-Ball."
+      "3s1": "I smell LUNC dumpers, astroport looks busy",
+      "3s2": "These guys are using astroport as a proper toilet with all this dumping",
+      "3s3": "Fatman: Look algod its luncman, let's go dunk on him and put it on twitter! Algod: Ugh I guess, I'm gonna need a trip to the bahamas after this",
+      "3s4": "MOBILIZE FUDDERS! ITS TIME TO FUD",
+      "3s5": "Selling LUNC? The only thing I hate more than a dumper is a stupid dumper"
     }
   },
   "nextLevel": 4

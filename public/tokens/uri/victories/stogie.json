@@ -1,0 +1,16 @@
+{
+    "name": "Stogie",
+    "description": "stogie victory",
+    "type": "victory",
+    "rarity": "spectral",
+    "rarityColor": "#7b03b5",
+    "previewImg": "/victories/stogie/stogie",
+    "mainImg": "/token_images/victories/stogie/stogie_victory.webp",
+    "showcase": "/token_images/victories/stogie/stogie.webm",
+    "glazed": "/victories/stogie/glazed_stogie.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/victories/stogie.json"
+  }

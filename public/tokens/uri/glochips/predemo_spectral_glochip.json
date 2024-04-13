@@ -1,0 +1,14 @@
+{
+    "name": "Predemo Glochip",
+    "description": "A spectral Glochip.",
+    "type": "glochip",
+    "rarity": "spectral",
+    "previewImg": "/glochips/spectral_glochip_preview",
+    "mainImg": "/glochips/spectral_glochip_preview",
+    "showcase": "/token_images/glochips/predemo_spectral_glochip.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/glochips/predemo_spectral_glochip.json"
+  }

@@ -1,0 +1,21 @@
+{
+    "name": "Steel Tread",
+    "description": "Steel glotag",
+    "type": "glotag",
+    "rarity": "esoteric",
+    "rarityColor": "#ffd418",
+    "previewImg": "/glotags/steel_tread/steel",
+    "mainImg": "/glotags/steel_tread/steel_glotag",
+    "showcase": "/token_images/glotags/steel_tread/steel_tread.webm",
+    "glazed": "/glotags/steel_tread/glazed_steel_tread.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/glotags/steel_tread.json",
+    "boxShadow": "-0.025rem 0 0.025rem #4f4f4f, 0 0.025rem 0.025rem #4f4f4f, -0.25rem 0.25rem 0.25rem #4f4f4f, -0.1rem 0.1rem 0.1rem #4f4f4f, -0.35rem 0.35rem 0.35rem #4f4f4f, inset 0 0 0.1625rem #4f4f4f",
+    "textColor": "#414141",
+    "glotagColor": "#4e4e4e",
+    "highlightColor": "#898989"
+  }
+

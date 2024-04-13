@@ -4,109 +4,179 @@
     "imgBase": "./js/background/",
     "videos": [
       {
-        "path": "./js/background/load_static",
+        "path": "./js/background/arcade_videos/preload_loop",
         "loop": true,
         "preload": false,
         "transitions": {
-          "home": "load_main",
-          "leaderboard": "load_leaderboard",
-          "luncman": "load_luncman",
-          "nft": "load_nft",
-          "mint": "load_nft",
-          "marketplace": "load_nft"
+          "home": "preload_home",
+          "leaderboard": "preload_home",
+          "luncman": "preload_home",
+          "nft": "preload_home",
+          "mint": "printer_glomint",
+          "marketplace": "printer_glomart"
         },
         "setElements": false
       },
       {
-        "path": "./js/background/load_main",
+        "path": "./js/background/arcade_videos/preload_home",
         "loop": false,
         "preload": true,
-        "transitions": ["home"],
+        "transitions": ["home_loop"],
         "setElements": false
       },
       {
-        "path": "./js/background/load_nft",
+        "path": "./js/background/arcade_videos/home_luncman",
         "loop": false,
         "preload": true,
-        "transitions": ["main_nft"],
+        "transitions": ["luncman_loop"],
         "setElements": false
       },
       {
-        "path": "./js/background/load_leaderboard",
-        "loop": false,
-        "preload": true,
-        "transitions": ["main_lb"],
-        "setElements": false
-      },
-      {
-        "path": "./js/background/load_luncman",
-        "loop": false,
-        "preload": true,
-        "transitions": ["main_static"],
-        "setElements": false
-      },
-      {
-        "path": "./js/background/home",
+        "path": "./js/background/arcade_videos/home_loop",
         "loop": true,
         "preload": true,
-        "transitions": ["main_credit", "main_play"],
+        "transitions": ["main_credit", "luncman_game"],
         "setElements": true
       },
       {
-        "path": "./js/background/main_static",
+        "path": "./js/background/arcade_videos/luncman_loop",
         "loop": true,
         "preload": true,
-        "transitions": ["main_credit", "main_play"],
+        "transitions": ["luncman_home", "luncman_game"],
         "setElements": true
       },
       {
-        "path": "./js/background/main_credit",
+        "path": "./js/background/arcade_videos/luncman_home",
         "loop": false,
         "preload": true,
-        "transitions": ["credit_static"],
+        "transitions": ["home_loop"],
         "setElements": false
       },
       {
-        "path": "./js/background/credit_static",
-        "loop": true,
-        "preload": true,
-        "transitions": ["credit_main"],
-        "setElements": false
-      },
-      {
-        "path": "./js/background/credit_main",
+        "path": "./js/background/arcade_videos/home_leaderboard",
         "loop": false,
-        "preload": false,
-        "transitions": ["main_static"],
+        "preload": true,
+        "transitions": ["leaderboard_loop"],
         "setElements": false
       },
       {
-        "path": "./js/background/main_play",
+        "path": "./js/background/arcade_videos/leaderboard_loop",
         "loop": false,
         "preload": true,
         "transitions": ["none"],
         "setElements": false
       },
       {
-        "path": "./js/background/play_main",
+        "path": "./js/background/arcade_videos/leaderboard_home",
         "loop": false,
-        "preload": false,
-        "transitions": ["main_static"],
+        "preload": true,
+        "transitions": ["home_loop"],
         "setElements": false
       },
       {
-        "path": "./js/background/main_nft",
+        "path": "./js/background/arcade_videos/luncman_game",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/game_luncman",
+        "loop": false,
+        "preload": false,
+        "transitions": ["luncman_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/printer_loop",
         "loop": true,
         "preload": true,
-        "transitions": ["main_static", "home"],
+        "transitions": ["luncman_loop", "home_loop"],
         "setElements": true
       },
       {
-        "path": "./js/background/main_lb",
+        "path": "./js/background/arcade_videos/home_printer",
+        "loop": false,
+        "preload": true,
+        "transitions": ["printer_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/printer_home",
+        "loop": false,
+        "preload": true,
+        "transitions": ["home_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/printer_glomart",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/glomart_printer",
+        "loop": false,
+        "preload": true,
+        "transitions": ["printer_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/printer_glomint",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/glomint_printer",
+        "loop": false,
+        "preload": true,
+        "transitions": ["printer_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/glomint_laser",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/laser_print_generic",
+        "loop": false,
+        "preload": false,
+        "transitions": ["laser_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/laser_print_esoteric",
+        "loop": false,
+        "preload": false,
+        "transitions": ["laser_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/laser_print_spectral",
+        "loop": false,
+        "preload": false,
+        "transitions": ["laser_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/laser_glomint",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/laser_loop",
         "loop": true,
         "preload": true,
-        "transitions": ["main_static", "home"],
-        "setElements": true
+        "transitions": ["printer_loop", "home_loop"],
+        "setElements": false
       }
     ],
     "screenWidth": 1192,

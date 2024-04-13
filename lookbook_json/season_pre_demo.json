@@ -1,0 +1,106 @@
+[
+  {
+    "name": "Cockroach",
+    "type": "PFP",
+    "rarity": "Generic",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/2qHH4eR1BaWJsPzf1OUlOGLhU3LrsPf5Xm7TEizMmdQ/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9ib2Fy/ZGdhbWluZ3BhcmVu/dC5jb20vd3AtY29u/dGVudC91cGxvYWRz/LzIwMjIvMDMvQ29j/a3JvYWNoLVBva2Vy/LVJldmlldy1DYXJk/cy0xMDAweDc1MC5q/cGc",
+    "previewImageLink": "https://imgs.search.brave.com/hMZQ3xehxW0al7U7eNi6uiXXNV9PHR_TL13j54UwbOY/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5pc3RvY2twaG90/by5jb20vaWQvMTcy/NDU0MTUxL3Bob3Rv/L2NvY2tyb2FjaC5q/cGc_cz02MTJ4NjEy/Jnc9MCZrPTIwJmM9/WUJBcEFEb3B3Nm5i/TkdtelVHZlY1TnpK/ZUJ3R0ZIUXZKb1ZM/cGo2TUJWbz0"
+  },
+  {
+    "name": "Normal",
+    "type": "Reaction",
+    "rarity": "Generic",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/zgghI8BH9p8ZtkZZMWHqZUwWFpRbTFxN7qIdzskgmXQ/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9yZW5k/ZXIuZmluZWFydGFt/ZXJpY2EuY29tL2lt/YWdlcy9yZW5kZXJl/ZC9tZWRpdW0vZ3Jl/ZXRpbmctY2FyZC9p/bWFnZXMvYXJ0d29y/a2ltYWdlcy9tZWRp/dW0vMi85LXRodW1i/cy11cC1jc2EtaW1h/Z2VzLmpwZw",
+    "previewImageLink": "https://imgs.search.brave.com/do0WXhgUuD03uTnt_kGs5ur2dh0I4g66gYqboAlpXI0/rs:fit:500:0:0/g:ce/aHR0cHM6Ly90NC5m/dGNkbi5uZXQvanBn/LzA0Lzc5LzAzLzM1/LzM2MF9GXzQ3OTAz/MzUzMl9JUGM5RnJS/c1JkRG9RRjN3eEZ2/TmtHeFZDc1h0am9x/di5qcGc"
+  },
+  {
+    "name": "LuncBliss",
+    "type": "PFP",
+    "rarity": "Esoteric",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/CjDcwvY9m09S2tTDpqjL5GKO2ym6aqKtsq2288Ti48w/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9pLnBp/bmltZy5jb20vb3Jp/Z2luYWxzL2M4LzE3/L2JjL2M4MTdiY2Jl/ZmQ1MzViOTRmYzg2/ZjQ5ZTgwMmYyOWQ4/LmpwZw",
+    "previewImageLink": "https://imgs.search.brave.com/Gjo49_gJONJ1l0Ama1iGhxTPKr99gHOSKA0G7A_3p1k/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9tZWRp/YS5nZXR0eWltYWdl/cy5jb20vaWQvOTg1/ODEzMDAwL2VzL2Zv/dG8vcGFjLW1hbi1p/cy1kaWVkLmpwZz9z/PTYxMng2MTImdz0w/Jms9MjAmYz1Qb0NL/TkJhNU1lU1doR3k3/X2lhVHRwamRGTFVx/blB0NzRwTmJrWmhN/eGRvPQ"
+  },
+  {
+    "name": "Steel Tread",
+    "type": "Glotag",
+    "rarity": "Esoteric",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/BwfAQWN94epZAAsG9NO3Je6A_qk77j4LW1RM4qIJy6s/rs:fit:500:0:0/g:ce/aHR0cHM6Ly9tLm1l/ZGlhLWFtYXpvbi5j/b20vaW1hZ2VzL0kv/ODF2R3Q5YnJLZEwu/anBn",
+    "previewImageLink": "https://imgs.search.brave.com/-VI9jAnlnt04BD4zhAlqK--uXDgq5KvTSJvPJodvjAE/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9pbWFn/ZXMuc3F1YXJlc3Bh/Y2UtY2RuLmNvbS9j/b250ZW50L3YxLzUx/MGQwNjU4ZTRiMGI3/NTk3NzQxMDdiNy8x/NDAyODU0OTY2MTM5/LUpUWU80U1lZTlBE/VkVBWklJMDJKL3N0/ZWVsLmpwZw"
+  },
+  {
+    "name": "Lunc Erikson",
+    "type": "Luncman",
+    "rarity": "Esoteric",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/XcTqUuRD29A-asYjZcRIEcSMW5yk8eSQSXT3Bi6P8MY/rs:fit:860:0:0/g:ce/aHR0cHM6Ly93d3cu/bXlwb2tlY2FyZC5j/b20vZW4vR2FsbGVy/eS9teS9nYWxlcnkv/UDlHR0MzaE9RakNz/LmpwZw",
+    "previewImageLink": "https://imgs.search.brave.com/jUn0IOP5Kh-q3z3-u7oLQJveEoKBQw5pcemyOCQY2uA/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9hbGx0/aGF0c2ludGVyZXN0/aW5nLmNvbS93b3Jk/cHJlc3Mvd3AtY29u/dGVudC91cGxvYWRz/LzIwMTkvMDgvdmlr/aW5ncy1sYW5kaW5n/LWluLWFtZXJpY2Eu/anBn"
+  },
+  {
+    "name": "Cig",
+    "type": "Victory",
+    "rarity": "Spectral",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/DvRE9N8XegvXp9vnIWtpYrbp15LSSY3zRMFHWH64abo/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9pbWFn/ZXMtbmEuc3NsLWlt/YWdlcy1hbWF6b24u/Y29tL2ltYWdlcy9J/LzcxMnRkUE5SMFZM/LmpwZw",
+    "previewImageLink": "https://imgs.search.brave.com/9FkU6y5T_RGcIRSwL5xaGjMN3tnsHJ4ZOr1jH04Yu1g/rs:fit:860:0:0/g:ce/aHR0cHM6Ly90NC5m/dGNkbi5uZXQvanBn/LzAyLzQzLzU0LzE1/LzM2MF9GXzI0MzU0/MTU2Ml91ZlJZOUxK/eE1OV2tXRG5ESThO/cFBRcHpDZTM2OXp6/dS5qcGc"
+  },
+  {
+    "name": "Tropical Beach",
+    "type": "Arcade",
+    "rarity": "Spectral",
+    "season": "pre-demo",
+    "imageLink": "https://imgs.search.brave.com/ahx5fkdfcDDGq4nd-xa8vz1L-b-E5BwTdu2ZcDq9bKU/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9ybHYu/emNhY2hlLmNvbS92/aW50YWdlX2hhd2Fp/aV90cm9waWNhbF9i/ZWFjaF90cmF2ZWxf/cG9zdGNhcmQtcjc1/YzhiMDhiNjk5MDQ3/NTRiMmUyZTMxMWM2/ZjJmZWJkX3FkZXkx/XzMwNy5qcGc",
+    "previewImageLink": "https://imgs.search.brave.com/unh1UT_fC7i6EmxBRRsPPz4zUPLfCimOvLfnrpV7X-c/rs:fit:860:0:0/g:ce/aHR0cHM6Ly9tLm1l/ZGlhLWFtYXpvbi5j/b20vaW1hZ2VzL0kv/NTFFVElObEgyT0wu/anBn"
+  },
+  {
+    "name": "predemo_generic_key",
+    "type": "Key",
+    "rarity": "Generic",
+    "season": "pre-demo",
+    "imageLink": "https://upload.wikimedia.org/wikipedia/commons/6/60/Solex_99_30_padlock_with_keys_%28DSCF2659%29.jpg",
+    "previewImageLink": "https://www.collinsdictionary.com/images/full/key_69270748_1000.jpg"
+  },
+  {
+    "name": "predemo_esoteric_key",
+    "type": "Key",
+    "rarity": "Esoteric",
+    "season": "pre-demo",
+    "imageLink": "https://upload.wikimedia.org/wikipedia/commons/6/60/Solex_99_30_padlock_with_keys_%28DSCF2659%29.jpg",
+    "previewImageLink": "https://www.collinsdictionary.com/images/full/key_69270748_1000.jpg"
+  },
+  {
+    "name": "predemo_spectral_key",
+    "type": "Key",
+    "rarity": "Spectral",
+    "season": "pre-demo",
+    "imageLink": "https://upload.wikimedia.org/wikipedia/commons/6/60/Solex_99_30_padlock_with_keys_%28DSCF2659%29.jpg",
+    "previewImageLink": "https://www.collinsdictionary.com/images/full/key_69270748_1000.jpg"
+  },
+  {
+    "name": "predemo_generic_glochip",
+    "type": "Glochip",
+    "rarity": "Generic",
+    "season": "pre-demo",
+    "imageLink": "https://i.ebayimg.com/images/g/dJIAAOSw88RbDGwX/s-l1600.jpg",
+    "previewImageLink": "https://miro.medium.com/v2/resize:fit:12000/1*nPm4540BlHG50qllzDV8uA.jpeg"
+  },
+  {
+    "name": "predemo_esoteric_glochip",
+    "type": "Glochip",
+    "rarity": "Esoteric",
+    "season": "pre-demo",
+    "imageLink": "https://i.ebayimg.com/images/g/dJIAAOSw88RbDGwX/s-l1600.jpg",
+    "previewImageLink": "https://miro.medium.com/v2/resize:fit:12000/1*nPm4540BlHG50qllzDV8uA.jpeg"
+  },
+  {
+    "name": "predemo_spectral_glochip",
+    "type": "Glochip",
+    "rarity": "Spectral",
+    "season": "pre-demo",
+    "imageLink": "https://i.ebayimg.com/images/g/dJIAAOSw88RbDGwX/s-l1600.jpg",
+    "previewImageLink": "https://miro.medium.com/v2/resize:fit:12000/1*nPm4540BlHG50qllzDV8uA.jpeg"
+  }
+]

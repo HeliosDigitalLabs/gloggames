@@ -1,0 +1,48 @@
+{
+    "name": "Lunc Erikson",
+    "description": "lunc erikson baby",
+    "type": "luncman",
+    "rarity": "esoteric",
+    "rarityColor": "#ffd418",
+    "previewImg": "/luncmen/lunc_erikson/lunc_erikson",
+    "mainImg": "/luncmen/lunc_erikson/lunc_erikson",
+    "showcase": "/token_images/luncmen/lunc_erikson/lunc_erikson.webm",
+    "glazed": "/luncmen/lunc_erikson/glazed_lunc_erikson.webm",
+    "gameImages": {
+      "default": {
+        "left": "token_images/luncmen/lunc_erikson/lunc_ericson_left.webp",
+        "right": "token_images/luncmen/lunc_erikson/lunc_ericson_right.webp",
+        "up": "token_images/luncmen/lunc_erikson/lunc_ericson_up.webp",
+        "down": "token_images/luncmen/lunc_erikson/lunc_ericson_down.webp"
+      },
+      "plus": {
+        "left": "token_images/luncmen/lunc_erikson/lunc_ericson+_left.webp",
+        "right": "token_images/luncmen/lunc_erikson/lunc_ericson+_right.webp",
+        "up": "token_images/luncmen/lunc_erikson/lunc_ericson+_up.webp",
+        "down": "token_images/luncmen/lunc_erikson/lunc_ericson+_down.webp"
+      },
+      "fire": {
+        "left": "token_images/luncmen/lunc_erikson/lunc_ericson_left_fire.webp",
+        "right": "token_images/luncmen/lunc_erikson/lunc_ericson_right_fire.webp",
+        "up": "token_images/luncmen/lunc_erikson/lunc_ericson_up_fire.webp",
+        "down": "token_images/luncmen/lunc_erikson/lunc_ericson_down_fire.webp"
+      },
+      "plusFire": {
+        "left": "token_images/luncmen/lunc_erikson/lunc_ericson+_left_fire.webp",
+        "right": "token_images/luncmen/lunc_erikson/lunc_ericson+_right_fire.webp",
+        "up": "token_images/luncmen/lunc_erikson/lunc_ericson+_up_fire.webp",
+        "down": "token_images/luncmen/lunc_erikson/lunc_ericson+_down_fire.webp"
+      },
+      "death": {
+        "death": "token_images/luncmen/lunc_erikson/lunc_ericson_death.webp"
+      },
+      "dashboard": {
+        "dash": "token_images/luncmen/lunc_erikson/LuncEriksonWebsite.webp"
+      }
+    },
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/luncmen/lunc_erikson.json"
+  } 

@@ -1,0 +1,14 @@
+{
+    "name": "Predemo Holokey",
+    "description": "Used to open a generic Glochip.",
+    "type": "key",
+    "rarity": "generic",
+    "previewImg": "/holokeys/generic_holokey_preview",
+    "mainImg": "/holokeys/generic_holokey_preview",
+    "showcase": "/token_images/holokeys/predemo_generic_key.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/holokeys/predemo_generic_holokey.json"
+  }

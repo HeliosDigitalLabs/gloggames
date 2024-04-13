@@ -19,6 +19,7 @@ class Fudder {
     } else {
       this.health = this.levelData.assets.fudderHealth;
     }
+    this.totalHealth = this.health;
 
     this.reset();
   }
@@ -114,6 +115,35 @@ class Fudder {
         break;
     }
     this.direction = this.defaultDirection;
+  }
+
+  setSpeedFactor(duration, speedFactor) {
+    console.log('setting speed for', this.name)
+    this.settingSpeedFactor = true;
+    // Store the original speed
+    const originalVelocityPerMs = this.velocityPerMs;
+  
+    // Ensure the current velocity is also adjusted
+    this.velocityPerMs = this.velocityPerMs * speedFactor;
+
+    const originalStutterThreshold = this.characterUtil.threshold;
+    this.characterUtil.threshold = originalStutterThreshold * 10;
+
+    // Set a timeout to reset the speeds after the specified duration
+    setTimeout(() => {
+      this.settingSpeedFactor = false;
+      this.velocityPerMs = originalVelocityPerMs;
+      this.characterUtil.threshold = originalStutterThreshold;
+    }, duration);
+  }
+
+  resetSpeedFactor() {
+    if (this.settingSpeedFactor) {
+      this.velocityPerMs = this.originalVelocityPerMs;
+      this.characterUtil.threshold = this.originalStutterThreshold;
+      this.settingSpeedFactor = false;
+    }
+    console.log('set', this.name, 'velocity to', this.velocityPerMs);
   }
 
   /**
@@ -234,14 +264,13 @@ class Fudder {
       // Death Animation
       this.animationTarget.style.backgroundImage = 'url(/style/graphics/spriteSheets/characters/ghosts/fudder_death.svg)';
     } else if (mode === 'scared') {
-      this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
-        + `spriteSheets/characters/ghosts/scared_${this.scaredColor}.svg)`;
+      this.animationTarget.classList.add('hue-rotate');
     } else if (mode === 'eyes') {
-
       this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
         + `spriteSheets/characters/ghosts/eyes_${direction}.svg)`;
     } else {
       this.animationTarget.style.backgroundImage = `url(${imgBase}${fudders[name]}.webp)`;
+      this.animationTarget.classList.remove('hue-rotate');
     }
   }  
 
@@ -1066,14 +1095,14 @@ class Fudder {
    */
   startEatenTimer(gridPosition) {
     const currentTime = new Date().getTime();
-    if (!this.lastEatenTimer || currentTime - this.lastEatenTimer > 20000) {
+    if (!this.lastEatenTimer || currentTime - this.lastEatenTimer > 5000) {
       this.lastEatenTimer = currentTime;
       this.eatenTimer = new Timer(() => {
         if (!this.enteringFudderHouse(this.mode, gridPosition)) {
-          this.killFudder();
+          this.endScared();
         }
         this.eatenTimer = null;
-      }, 15000);
+      }, 5000);
     }
   }
 
@@ -1084,6 +1113,7 @@ class Fudder {
     // Set attacked to true and start a 2-second timer to set attacked to false
     this.attacked = true;
     this.allowCollision = false;
+    this.startHealth = this.health;
     const timerDuration = 2000; // 2 seconds
     const timerCallback = () => {
       this.attacked = false;
@@ -1093,13 +1123,17 @@ class Fudder {
 
     // Check the conditions to call reduceHealth with the appropriate damage
     if (this.luncman.speedBoost && this.mode === 'scared') {
-      this.reduceHealth(100);
+      this.reduceHealth(250);
+      new Onomat('scaredCrit');
     } else if (this.luncman.speedBoost) {
-      this.reduceHealth(100);
+      this.reduceHealth(150);
+      new Onomat('crit');
     } else if (this.mode === 'scared') {
       this.reduceHealth(100);
+      new Onomat('scared')
     } else {
       this.reduceHealth(50);
+      new Onomat('hit')
     }
   }
 
@@ -1110,8 +1144,12 @@ class Fudder {
   reduceHealth(damage) {
     console.log('Reducing health for:', this.name);
     if (this.health - damage <= 0) {
+      if (this.mode === 'scared') {
+        new Onomat('scaredKill');
+      }
       this.killFudder();
     } else {
+      window.luncMachine.gameCoordinator.soundManager.play('hitmarker');
       this.health -= damage;
       console.log(this.name, 'got got for', damage, 'only has', this.health, 'health left');
       
@@ -1130,11 +1168,13 @@ class Fudder {
   }
 
   updateHealthBar() {
+    let totalHealth;
     if (this.name === 'fudder1') {
-      this.healthPercentage = this.health / this.levelData.assets.fudder1Health;
+      totalHealth = this.levelData.assets.fudder1Health;
     } else {
-      this.healthPercentage = this.health / this.levelData.assets.fudderHealth;
+      totalHealth = this.levelData.assets.fudderHealth;
     }
+    this.healthPercentage = this.health / totalHealth;
     this.healthBar.classList.add('health-bar');
   
     let healthBarWidth;
@@ -1143,13 +1183,41 @@ class Fudder {
     if (this.dead) {
       healthColor = 'rgb(255, 0, 0)';
       healthBarWidth = 0;
-    } else {
-      healthBarWidth = Math.max(0, this.healthPercentage * 100);
-      healthColor = this.getHealthBarColor(this.healthPercentage);
+      this.healthDisplay.innerText = 'R.I.P.';
+  
+      this.healthBar.style.width = healthBarWidth + '%';
+      this.healthBar.style.backgroundColor = healthColor;
+      return;
     }
+
+    healthBarWidth = Math.max(0, this.healthPercentage * 100);
+    healthColor = this.getHealthBarColor(this.healthPercentage);
   
     this.healthBar.style.width = healthBarWidth + '%';
     this.healthBar.style.backgroundColor = healthColor;
+
+    if (this.healthDisplay) {
+      this.healthDisplay.innerText = this.health + '/' + totalHealth;
+    } else {
+      const healthDisplay = document.getElementById(this.name + 'HealthDisplay');
+      if (healthDisplay) {
+        this.healthDisplay = healthDisplay
+        this.healthDisplay.innerText = this.health + '/' + totalHealth;
+      } else {
+        this.healthDisplay = document.createElement('div');
+        this.healthDisplay.id = this.name + 'HealthDisplay';
+        this.healthDisplay.innerText = this.health + '/' + totalHealth;
+
+        const healthbar = 'healthbar' + this.name.slice(-1);
+        document.getElementById(healthbar).appendChild(this.healthDisplay);
+  
+        this.healthDisplay.style.display = 'flex';
+        this.healthDisplay.style.left = '2.5%';
+        this.healthDisplay.style.color = 'white';
+        this.healthDisplay.style.fontSize = '.5em';
+        this.healthDisplay.style.zIndex = '5';
+      }
+    }
   }
   
   getHealthBarColor(percentage) {
@@ -1163,6 +1231,7 @@ class Fudder {
    */
   killFudder() {
     console.log(this.name, 'got clapped')
+
     //this.moving = false;
     this.allowCollision = false;
     this.attacked = false;
@@ -1186,6 +1255,7 @@ class Fudder {
    * @returns {number}
    */
   determineVelocity(position, mode) {
+    if (this.settingSpeedFactor) return this.velocityPerMs;
     if (mode === 'eyes') {
       return this.eyeSpeed;
     }
@@ -1263,6 +1333,9 @@ class Luncman {
     this.scared = false;
     this.attack = false;
     this.levelData = levelData;
+    
+    this.speedBoostTimeout = null;
+    this.attackTimeout = null;
 
     this.reset();
   }
@@ -1279,17 +1352,43 @@ class Luncman {
     this.setStyleMeasurements(this.scaledTileSize, this.spriteFrames);
     this.updateDefaultPosition(this.levelData.defaultPosition);
     this.setDefaultPosition(this.scaledTileSize, this.defaultPosition);
-    this.setSpriteSheet(this.direction);
+    this.setSpriteSheetSources();
+    this.setSpriteSheet();
     this.luncmanArrow.style.backgroundImage = 'url(/style/graphics/'
       + `spriteSheets/characters/luncman/arrow_${this.direction}.svg)`;
     this.attackCount = 0;
     this.isDead = false;
-
+    this.originalVelocityPerMs = this.calculateVelocityPerMs(this.scaledTileSize);
+    this.velocityPerMs = this.originalVelocityPerMs;
+    this.speedFactor = 1;
+    if (this.speedBoostTimeout) clearTimeout(this.speedBoostTimeout);
+    if (this.attackTimeout) clearTimeout(this.attackTimeout);
+    this.speedBoost = false;
+    this.attack = false;
+    this.backgroundOffsetPixels = 0;
+    this.msSinceLastSprite = 0;
+    this.resetSpeedFactor(true);
+    this.updateSpeed(true);
   }
 
   // update default position
   updateDefaultPosition(newDefaultPosition) {
     this.defaultPosition = newDefaultPosition;
+  }
+
+  updateSpeed(reset) {
+    if (reset) {
+      this.originalVelocityPerMs = this.calculateVelocityPerMs(this.scaledTileSize);
+      this.velocityPerMs = this.originalVelocityPerMs;
+      console.log('set luncman velocity to', this.velocityPerMs);
+      return;
+    }
+    let baseSpeedMultiplier = this.speedFactor; // Start with the current speed factor
+    if (this.speedBoost) baseSpeedMultiplier *= 2;
+    if (this.attack) baseSpeedMultiplier *= 2.5;
+    if (this.speedBoost && this.attack) baseSpeedMultiplier = this.speedFactor * 3.5; // Apply both modifiers on top of speed factor
+
+    this.velocityPerMs = this.originalVelocityPerMs * baseSpeedMultiplier;
   }
 
   /**
@@ -1300,26 +1399,147 @@ class Luncman {
     this.velocityPerMs = this.calculateVelocityPerMs(scaledTileSize);
     this.desiredDirection = this.characterUtil.directions.left;
     this.direction = this.characterUtil.directions.left;
-    this.moving = false;
+    if (!this.attack || !this.speedBoost) this.moving = false;
   } 
 
   resetVelocityPerMs() {
     this.velocityPerMs = this.originalVelocityPerMs;
   }
 
+  setSpeedFactor(duration, speedFactor) {
+    // Apply the speed factor
+    this.speedFactor = speedFactor;
+    this.updateSpeed();
+
+    // Extend or set the speed boost duration with tracking start time
+    if (this.speedBoost) {
+      const now = Date.now();
+      // If speedBoostStartTime is not set, this is the initial setting
+      if (!this.speedBoostStartTime) this.speedBoostStartTime = now;
+      // Calculate elapsed time
+      const elapsedTime = now - this.speedBoostStartTime;
+      // Adjust remaining time based on elapsed time
+      const adjustedDuration = Math.max(0, duration + (this.originalBoostDuration - elapsedTime));
+      clearTimeout(this.speedBoostTimeout);
+      this.speedBoostTimeout = setTimeout(this.endSpeedBoost.bind(this), adjustedDuration);
+    }
+
+    // Similar logic for attack
+    if (this.attack) {
+      const now = Date.now();
+      if (!this.attackStartTime) this.attackStartTime = now;
+      const elapsedTime = now - this.attackStartTime;
+      const adjustedDuration = Math.max(0, duration + (this.originalAttackDuration - elapsedTime));
+      clearTimeout(this.attackTimeout);
+      this.attackTimeout = setTimeout(this.endAttack.bind(this), adjustedDuration);
+    }
+
+    this.settingSpeedFactor = true;
+    const originalVelocityPerMs = this.velocityPerMs;
+    this.velocityPerMs = originalVelocityPerMs * speedFactor;
+    
+    this.speedBoostDuration = duration;
+    this.attackDuration = duration;
+
+    const originalStutterThreshold = this.characterUtil.threshold;
+    this.characterUtil.threshold = originalStutterThreshold * 10;
+
+
+    setTimeout(() => {
+      this.settingSpeedFactor = false;
+      this.speedFactor = 1;
+      this.updateSpeed();
+      this.characterUtil.threshold = originalStutterThreshold;
+    }, duration);
+  }
+
+  endSpeedBoost() {
+    // Logic to properly end speed boost
+    this.speedBoost = false;
+    // Reset timer related variables
+    this.originalSpeedBoostDuration = 0;
+    this.extendedSpeedBoostDuration = 0;
+  }
+
+  endAttack() {
+    // Logic to properly end attack
+    this.attack = false;
+    // Reset timer related variables
+    this.originalAttackDuration = 0;
+    this.extendedAttackDuration = 0;
+    this.setStyleMeasurements(this.scaledTileSize, this.spriteFrames);
+  }
+
+  extendEffectDuration(effectType, duration) {
+    clearTimeout(this[`${effectType}Timeout`]);
+    if (effectType === 'speedBoost') {
+      this.speedBoostTimeout = setTimeout(() => {
+        this.speedBoost = false;
+        this.updateSpeed();
+      }, duration);
+    } else if (effectType === 'attack') {
+      this.attackTimeout = setTimeout(() => {
+        this.luncmanArrow.style.display = 'block';
+        this.attack = false;
+        this.updateSpeed(); // Ensure speed recalculates when attack ends
+        this.setStyleMeasurements(this.scaledTileSize, this.spriteFrames);
+      }, duration);
+    }
+  }
+
+  resetSpeedFactor(fullReset) {
+    // Reset to original speed factor
+    this.speedFactor = 1;
+    this.updateSpeed();
+
+    if (fullReset) return;
+
+    let speedBoostDuration;
+    let attackDuration;
+    if (this.speedBoost) {
+      // Compare and use the lesser of the original or extended duration
+      speedBoostDuration = Math.min(this.originalSpeedBoostDuration, this.extendedSpeedBoostDuration);
+      clearTimeout(this.speedBoostTimeout);
+      this.speedBoostTimeout = setTimeout(() => this.endSpeedBoost(), speedBoostDuration);
+    }
+    if (this.attack) {
+      attackDuration = Math.min(this.originalAttackDuration, this.extendedAttackDuration);
+      clearTimeout(this.attackTimeout);
+      this.attackTimeout = setTimeout(() => this.endAttack(), attackDuration);
+    }
+
+    this.extendEffectDuration('speedBoost', speedBoostDuration);
+    this.extendEffectDuration('attack', attackDuration);
+  }
+
   // speed boost functions
 
   getSpeedBoost() {
     this.speedBoost = true;
-    this.velocityPerMs = this.velocityPerMs * 2;
+    this.updateSpeed();
+
+    const originalStutterThreshold = this.characterUtil.threshold;
+    this.characterUtil.threshold = originalStutterThreshold * 10;
+
     const createBlurInterval = setInterval(() => {
       this.createMotionBlurCopy();
     }, 50); // create a motion blur copy every 50ms
-    setTimeout(() => {
-      clearInterval(createBlurInterval); // stop creating motion blur copies
-      this.resetVelocityPerMs();
+    // Clear existing timeout to prevent premature reset
+    if (this.speedBoostTimeout) clearTimeout(this.speedBoostTimeout);
+    
+    const duration = 250;
+    const startTime = Date.now();
+    this.speedBoostTimeout = setTimeout(() => {
+      clearInterval(createBlurInterval);
       this.speedBoost = false;
-    }, 250); // milliseconds
+      this.updateSpeed(); // Recalculate speed after boost ends
+    }, duration);
+
+    this.getRemainingSpeedBoostTime = function() {
+      const currentTime = Date.now();
+      const elapsedTime = currentTime - startTime;
+      return duration - elapsedTime;
+    }
   }
 
   createMotionBlurCopy() {
@@ -1345,22 +1565,62 @@ class Luncman {
   updateSpriteSheet() {
     if (this.isDead) {
       return; // If Luncman is dead, don't change the sprite sheet
-  }
+    }
     if (this.scared && !this.attack) {
       this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
-        + `spriteSheets/characters/luncman/luncman_${this.direction}+.webp)`;
+        + `${this.imageSources.plus[this.direction]})`;
     } else if (this.attack) {
       this.setAttackAnimationStats();
       if (this.scared) {
         this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
-        + `spriteSheets/characters/luncman/luncman+_${this.direction}_fire.webp)`;
+        + `${this.imageSources.plusFire[this.direction]})`;
       } else {
         this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
-        + `spriteSheets/characters/luncman/luncman_${this.direction}_fire.webp)`;
+        + `${this.imageSources.fire[this.direction]})`;
       }
     } else {
-      this.setSpriteSheet(this.direction);
+      this.setSpriteSheet();
     }
+  }
+
+  setSpriteSheetSources() {
+    // Check if the NFT exists
+    if (window.client.gloInfo.activeLuncman) {
+      // If NFT exists, set the image source to the NFT source
+      this.imageSources = window.client.gloInfo.activeLuncman.metadata.gameImages;
+    } else {
+      // If NFT does not exist, set the image source to the default source
+      this.imageSources = {
+        default: {
+          left: 'spriteSheets/characters/luncman/luncman_left.webp',
+          right: 'spriteSheets/characters/luncman/luncman_right.webp',
+          up: 'spriteSheets/characters/luncman/luncman_up.webp',
+          down: 'spriteSheets/characters/luncman/luncman_down.webp'
+        },
+        plus: {
+          left: 'spriteSheets/characters/luncman/luncman_left+.webp',
+          right: 'spriteSheets/characters/luncman/luncman_right+.webp',
+          up: 'spriteSheets/characters/luncman/luncman_up+.webp',
+          down: 'spriteSheets/characters/luncman/luncman_down+.webp'
+        },
+        fire: {
+          left: 'spriteSheets/characters/luncman/luncman_left_fire.webp',
+          right: 'spriteSheets/characters/luncman/luncman_right_fire.webp',
+          up: 'spriteSheets/characters/luncman/luncman_up_fire.webp',
+          down: 'spriteSheets/characters/luncman/luncman_down_fire.webp'
+        },
+        plusFire: {
+          left: 'spriteSheets/characters/luncman/luncman+_left_fire.webp',
+          right: 'spriteSheets/characters/luncman/luncman+_right_fire.webp',
+          up: 'spriteSheets/characters/luncman/luncman+_up_fire.webp',
+          down: 'spriteSheets/characters/luncman/luncman+_down_fire.webp'
+        }
+      };
+    }
+    console.log('set luncman sources', this.imageSources)
+
+    // Update the sprite and arrow images using the new sources
+    this.setSpriteSheet();
   }
 
   setAttackAnimationStats() {
@@ -1404,24 +1664,39 @@ class Luncman {
     if (this.attack === false) {
       console.log(`Using ${this.attackCount}/3 attacks`);
       this.attack = true;
+      this.updateSpeed();
       this.attackCount -= 1;
-      this.velocityPerMs = this.velocityPerMs * 2.5;
+      window.attackCount = this.attackCount;
+
+      const originalStutterThreshold = this.characterUtil.threshold;
+      this.characterUtil.threshold = originalStutterThreshold * 10;
   
   
       // Create motion blur copies of the updated sprite sheet
       const createBlurInterval = setInterval(() => {
         this.createMotionBlurCopy();
       }, 50); // create a motion blur copy every 50ms
-  
-      setTimeout(() => {
+      
+      // Clear existing timeout to prevent premature reset
+      if (this.attackTimeout) clearTimeout(this.attackTimeout);
+      
+      const duration = 250;
+      const startTime = Date.now();
+      this.attackTimeout = setTimeout(() => {
         this.luncmanArrow.style.display = 'block';
         clearInterval(createBlurInterval); // stop creating motion blur copies
-        this.resetVelocityPerMs();
-        this.attack = false;
-        this.setSpriteAnimationStats();
+        // this.setSpriteAnimationStats();
         this.setStyleMeasurements(this.scaledTileSize, this.spriteFrames);
+        this.characterUtil.threshold = originalStutterThreshold;
+        this.attack = false;
+        this.updateSpeed(); // Recalculate speed after attack ends
+      }, duration); 
 
-      }, 250); // milliseconds
+      this.getRemainingAttackTime = function() {
+        const currentTime = Date.now();
+        const elapsedTime = currentTime - startTime;
+        return duration - elapsedTime;
+      }
     }
   }
 
@@ -1497,10 +1772,11 @@ class Luncman {
    * Chooses a movement Spritesheet depending upon direction
    * @param {('up'|'down'|'left'|'right')} direction - The character's current travel orientation
    */
- setSpriteSheet(direction) {
-    this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
-    + `spriteSheets/characters/luncman/luncman_${direction}.webp)`;
-}
+ setSpriteSheet() {
+  this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
+  + `${this.imageSources.default[this.direction]})`;
+  }
+
   prepDeathAnimation() {
     this.isDead = true;
     this.loopAnimation = false;
@@ -1510,8 +1786,13 @@ class Luncman {
     this.backgroundOffsetPixels = 0;
     const bgSize = this.measurement * this.spriteFrames;
     this.animationTarget.style.backgroundSize = `${bgSize}px`;
-    this.animationTarget.style.backgroundImage = 'url(/style/'
-      + 'graphics/spriteSheets/characters/luncman/luncman_death.webp)';
+    if (!window.client.gloInfo.activeLuncman) {
+      this.animationTarget.style.backgroundImage = 'url(/style/'
+        + 'graphics/spriteSheets/characters/luncman/luncman_death.webp)';
+    } else {
+      this.animationTarget.style.backgroundImage = 'url(/style/graphics/'
+        + window.client.gloInfo.activeLuncman.metadata.gameImages.death['death'];
+    }
     this.animationTarget.style.backgroundPosition = '0px 0px';
     this.luncmanArrow.style.backgroundImage = '';
   }
@@ -1565,7 +1846,7 @@ class Luncman {
       desired.newGridPosition, this.mazeArray, this.desiredDirection,
     )) {
       this.direction = this.desiredDirection;
-      this.setSpriteSheet(this.direction);
+      this.setSpriteSheet();
       return desired.newPosition;
     } else if (!this.characterUtil.checkForWallCollision(
       alternate.newGridPosition, this.mazeArray, this.direction,
@@ -1597,7 +1878,7 @@ class Luncman {
       this.direction, this.desiredDirection,
     )) {
       this.direction = this.desiredDirection;
-      this.setSpriteSheet(this.direction);
+      this.setSpriteSheet();
       return desired.newPosition;
     } if (this.characterUtil.changingGridPosition(
       gridPosition, alternate.newGridPosition,
@@ -1726,6 +2007,353 @@ class Luncman {
   }
 }
 
+/***
+ * Creates an Onomatatopoeia effect
+ ***/
+class Onomat {
+  constructor (type, determinedImageIndex = 0) {
+    this.type = type;
+    this.luncman = window.luncMachine.gameCoordinator.luncman.animationTarget;
+    this.luncmanPos = {
+      x: parseFloat(this.luncman.style.left),
+      y: parseFloat(this.luncman.style.top)
+    }
+    console.log('got luncman pos', this.luncmanPos, 'from', this.luncman.style.left, window.luncMachine.gameCoordinator.scale)
+    this.images = window.luncMachine.gameCoordinator.onomatImages[type];
+    this.determinedImageIndex = determinedImageIndex;
+    console.log('created onomat', this.images, this.determinedImageIndex)
+    
+    this.offset = { x: 0, y: 0 };
+    this.duration = 1000;
+    
+    this.elements = [];
+
+    this.createOnomatopoeia();
+  }
+
+  createOnomatopoeia() {
+    if (!this.images || this.images.length === 0) {
+      console.error('No images available for this type:', this.type);
+      return;
+    }
+
+    // Randomly select an image index from the available images for the type
+    const imageIndex = Math.floor(Math.random() * this.images.length);
+    console.log(`Selected image index for type ${this.type}:`, imageIndex);
+    let width;
+    let height;
+    let offset = {
+      x: 0,
+      y: 0
+    };
+    let hueRotate;
+
+    switch (this.type) {
+      case 'attack':
+        // Type-specific configurations
+        this.duration = 0;
+        this.fadeDuration = 500;
+        this.frameCount = 8;
+        this.fps = 8;
+        this.follow = true;
+        width = 30;
+        height = 100;
+
+        if (window.luncMachine.gameCoordinator.attackOnomat) {
+          window.luncMachine.gameCoordinator.attackOnomat.removeOnomat();
+          window.luncMachine.gameCoordinator.attackOnomat = null;
+    
+          window.luncMachine.gameCoordinator.attackOnomat = this;
+        } else {
+          window.luncMachine.gameCoordinator.attackOnomat = this;
+          console.log('set attackOnomat', this)
+        }
+
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(this.determinedImageIndex, { width: width * .5, height: height * .5}, { width: width, height: height });
+        break;
+      case 'hit':
+        this.frameCount = 8;
+        this.fps = 8;
+        this.duration = 1000;
+        this.fadeDuration = 0;
+        width = 100;
+        height = 50;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case '$coin':
+        this.duration = 2000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 57;
+        height = 27;
+        offset = {
+          x: 0,
+          y: -35
+        }
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(this.determinedImageIndex, { width: width * 1.5, height: height * 1.5 }, { width: width, height: height }, offset); // Example of different size
+        
+        width = 100;
+        height = 50;
+        offset = {
+          x: 0,
+          y: -2
+        };
+        const pointIndex = this.determinedImageIndex += 1;
+        this.createOnomatopoeiaElement(pointIndex, { width: width * .75, height: height * .75 }, { width: width, height: height }, offset);
+        break;
+      case 'kill':
+        this.duration = 2000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 91;
+        height = 27;
+        switch (imageIndex) {
+          case 0:
+            window.luncMachine.gameCoordinator.soundManager.play('byebye', true)
+            break;
+          case 1:
+            window.luncMachine.gameCoordinator.soundManager.play('adios', true)
+            break;
+          case 2:
+            window.luncMachine.gameCoordinator.soundManager.play('fudoff', true)
+            break;
+          case 3:
+            window.luncMachine.gameCoordinator.soundManager.play('lunc', true)
+            break;
+          default:
+            break;
+        }
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width * 2, height: height * 2 }, { width: width, height: height }); // Example of different size
+        break;
+      case 'collat':
+        this.duration = 3000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 174;
+        height = 67;
+        if (window.collateralCount > 1) {
+          offset = {
+            x: width / 8,
+            y: (-height * .25) * window.collateralCount
+          }
+          hueRotate = 90;
+          console.log('set offset to', offset, 'using', width / 8, 'and', height * window.collateralCount)
+        }
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }, offset, hueRotate); // Example of different size
+        window.collateralCount++;
+        setTimeout(() => {
+          window.collateralCount = 1;
+        }, 650);
+        break;
+      case 'chain':
+        this.duration = 3000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 174;
+        height = 67;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case 'crit':
+        this.frameCount = 8;
+        this.fps = 8;
+        this.duration = 1000;
+        this.fadeDuration = 0;
+        width = 100;
+        height = 50;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case 'scared':
+        this.frameCount = 8;
+        this.fps = 8;
+        this.duration = 1000;
+        this.fadeDuration = 0;
+        width = 100;
+        height = 50;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case 'scaredCrit':
+        this.frameCount = 8;
+        this.fps = 8;
+        this.duration = 1000;
+        this.fadeDuration = 0;
+        width = 100;
+        height = 50;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case 'scaredKill':
+        this.duration = 2000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 21;
+        height = 9;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width * 2, height: height * 2 }, { width: width, height: height }); // Example of different size
+        break;
+      case 'eat':
+        this.duration = 2000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 124;
+        height = 40;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case 'gloUp':
+        this.duration = 2000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 91;
+        height = 27;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width, height: height }, { width: width, height: height }); // Example of different size
+        break;
+      case 'newLife':
+        this.duration = 2000;
+        this.fadeDuration = 1000;
+        this.frameCount = 8;
+        this.fps = 8;
+        width = 16;
+        height = 12;
+        // Create onomatopoeia element with the random image
+        this.createOnomatopoeiaElement(imageIndex, { width: width * 3, height: height * 3 }, { width: width, height: height }); // Example of different size
+        break;
+      default:
+        console.error('Tried to create onomatopoeia but no valid type was given');
+        break;
+    }
+  }
+
+  createOnomatopoeiaElement(imageIndex, size, imgSize, offset, hueRotate) {
+    this.onomatElement = document.createElement('div');
+    this.onomatElement.style.position = 'absolute';
+    this.onomatElement.style.zIndex = '5';
+    this.updateElementPosition(offset); // Initial position update
+    
+    // Add the created onomatElement to the tracking array
+    this.elements.push(this.onomatElement);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = size.width;
+    canvas.height = size.height;
+    
+    // Apply hue rotation if hueRotate is specified
+    if (hueRotate) {
+      const context = canvas.getContext('2d');
+      context.filter = `hue-rotate(${hueRotate}deg)`;
+    }
+
+    this.onomatElement.appendChild(canvas);
+
+    window.luncMachine.gameCoordinator.mazeDiv.appendChild(this.onomatElement);
+
+    this.animateOnomatopoeia(canvas, imageIndex, imgSize); // Pass this.onomatElement to the animation function
+
+    // Add a CSS class for the fade out transition
+    this.onomatElement.classList.add('fade-out');
+
+    if (this.duration > 0) {
+      // Fade out the element before removing it
+      setTimeout(() => {
+        this.onomatElement.style.opacity = '0';
+        // Remove the element after the fade duration
+        setTimeout(() => this.removeOnomat(), this.fadeDuration);
+      }, this.duration - this.fadeDuration);
+    }
+  }
+
+  animateOnomatopoeia(canvas, imageIndex, imgSize) {
+    const context = canvas.getContext('2d');
+    const image = this.images[imageIndex];
+    let frameIndex = 0;
+    const frameCount = this.frameCount;
+    const framesPerRow = this.frameCount;
+    const frameWidth = imgSize.width;
+    const frameHeight = imgSize.height;
+    let lastFrameTime = 0;
+    const fps = this.fps;
+    const frameDelay = 1000 / fps;
+
+    const startTime = Date.now();
+
+    const animate = (timestamp) => {
+        if (timestamp - lastFrameTime > frameDelay) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            const frameX = (frameIndex % framesPerRow) * frameWidth;
+            const frameY = Math.floor(frameIndex / framesPerRow) * frameHeight;
+
+            context.drawImage(image, frameX, frameY, frameWidth, frameHeight, 0, 0, canvas.width, canvas.height);
+
+            frameIndex++;
+            if (frameIndex >= frameCount) frameIndex = 0;
+            lastFrameTime = timestamp;
+        }
+
+        if (this.follow) {
+            this.updateElementPosition();
+        }
+
+        requestAnimationFrame(animate);
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  updateElementPosition(offset) {
+    let updateOffset = offset || this.offset;
+    // Calculate the position based on Luncman's current position
+    let top = this.luncmanPos.y + updateOffset.y;
+    let left = this.luncmanPos.x + updateOffset.x;
+
+    // Adjust the position with the offset if this.follow is true
+    if (this.follow) {
+        // If following Luncman, optionally adjust for historical position
+        const historicalPosition = window.luncMachine.gameCoordinator.getLuncmanPositionFromHistory(200); // Example usage
+        if (historicalPosition) {
+            top = historicalPosition.y + this.offset.y;
+            left = historicalPosition.x + this.offset.x;
+        } else {
+            // Apply current offset if historical position is not used or available
+            top += this.offset.y;
+            left += this.offset.x;
+        }
+    }
+    
+    // Apply the calculated position
+    this.onomatElement.style.top = `${top}px`;
+    this.onomatElement.style.left = `${left}px`;
+  }
+
+  removeOnomat() {
+    this.elements.forEach((element, index) => {
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+        console.log(`Onomatopoeia element removed from DOM: ${this.type}, index: ${index}`);
+      } else {
+        console.log(`Onomatopoeia element was already removed or never attached: ${this.type}, index: ${index}`);
+      }
+    });
+  
+    // Clear the elements array after removal
+    this.elements = [];
+  }
+}
+
 class Ability {
   constructor(abilityIndex, abilityType, cooldownTime) {
     this.complete = false;
@@ -1765,6 +2393,7 @@ class Ability {
     
     // Create a new div element.
     this.abilityDiv = document.createElement("div");
+    this.abilityDiv.id = `ability${this.abilityIndex}`;
     
     // Set the background image.
     this.abilityDiv.style.backgroundImage = `url(${abilitySvgPath})`;
@@ -1772,27 +2401,47 @@ class Ability {
     // Set the div to show only a single frame of the spritesheet.
     this.abilityDiv.style.width = `${this.frameWidth}px`;
     this.abilityDiv.style.height = '32px'; // replace with the height of your frames
+    this.abilityDiv.style.zIndex = '2';
     this.abilityDiv.style.backgroundRepeat = 'no-repeat';
+
+    // Add the div to the body of the document.
+    const contentContainer = document.getElementById('content-container');
+    contentContainer.appendChild(this.abilityDiv);
     
     // Calculate the x-position based on the ability index.
-    const totalWidth = 3 * this.frameWidth + 2 * 10;
-    const xPos = this.abilityIndex * (this.frameWidth + 10);
-    const screenWidth = window.innerWidth
+    // const totalWidth = 3 * this.frameWidth + 2 * 10;
+    // const xPos = this.abilityIndex * (this.frameWidth + 10);
+    // const screenWidth = contentContainer.offsetWidth;
+    // console.log('positioning ability', this.abilityIndex, 'at', (screenWidth / 2) - (totalWidth / 2) + xPos, 'px');
     
     // Set the position of the div.
     this.abilityDiv.style.position = "absolute";
-    this.abilityDiv.style.left = `${(screenWidth / 2) - (totalWidth / 2) + xPos}px`;
+    // this.abilityDiv.style.left = `${(screenWidth / 2) - (totalWidth / 2) + xPos}px`;
     if (this.isMobile) {
       this.abilityDiv.style.top = window.abilityTop;
     } else {
-      this.abilityDiv.style.top = '5vh';
+      this.abilityDiv.style.top = '3.5%';
     }
+    Ability.updateAllAbilityPositions();
     
-    // Add the div to the body of the document.
-    document.body.appendChild(this.abilityDiv);
     
     // Start the timer.
     this.startTimer();
+  }
+
+  static updateAllAbilityPositions() {
+    const abilities = document.querySelectorAll('[id^="ability"]');
+    const totalAbilities = abilities.length;
+    const contentContainer = document.getElementById('content-container');
+    const screenWidth = contentContainer.offsetWidth;
+    const abilityWidth = 32; // Assuming all abilities have the same width
+    const gap = 10; // Assuming a fixed gap between abilities
+    const totalWidth = totalAbilities * abilityWidth + (totalAbilities - 1) * gap;
+
+    abilities.forEach((ability, index) => {
+      const position = (screenWidth / 2) - (totalWidth / 2) + (index * (abilityWidth + gap));
+      ability.style.left = `${position}px`;
+    });
   }
 
   startTimer() {
@@ -1805,8 +2454,23 @@ class Ability {
 
   updateTimer(updateAmount) {
     // subtract x ms from timer
-    this.abilityTimer.remaining = this.abilityTimer.remaining - updateAmount;
-    this.animation.remaining = this.animation.remaining - updateAmount;
+    this.abilityTimer.remaining = this.abilityTimer.remaining -= updateAmount;
+    this.animation.remaining = this.animation.remaining -= updateAmount;
+    this.checkCooldownCompletion();
+  }
+
+  checkCooldownCompletion() {
+    // If the remaining time is less than or equal to 500ms and we haven't started recording, start now
+    if (this.abilityTimer.remaining <= 500 && !this.startedRecordingPosition) {
+    }
+
+    // If the total elapsed time exceeds the adjusted cooldown time, complete the cooldown
+    if (this.abilityTimer.remaining <= 0) {
+      this.completeAbility();
+      this.cooldownComplete = true;
+      // clear the timer
+      clearTimeout(this.abilityTimer.timerId);
+    }
   }
 
   updateAnimation() {
@@ -1908,12 +2572,15 @@ class Ability {
     if (this.animation) {
       clearTimeout(this.animation.timerId);
     }
-    if (this.loopAnimationTimer) {
+    if (this.loopTimer) { // Ensure you refer to it correctly; it seems there was a typo in the original code.
       clearTimeout(this.loopTimer.timerId);
     }
-
+  
     // Remove the div from the DOM
     this.abilityDiv.remove();
+  
+    // Defer the update of all ability positions
+    setTimeout(() => Ability.updateAllAbilityPositions(), 0);
   }
 }
 
@@ -1934,20 +2601,22 @@ class GameCoordinator {
     this.fruitDisplay = document.getElementById('fruit-display');
     this.mainMenu = document.getElementById('main-menu-container');
     this.gameStartButton = document.getElementById('game-start');
-    this.pauseButton = document.getElementById('pause-button');
     this.soundButton = document.getElementById('sound-button');
+    this.volumeIcon = document.getElementById('volume-icon');
+    this.soundControl = document.getElementById('sound-control');
+    this.pauseButton = document.getElementById('pause-button');
+    this.pauseIcon = document.getElementById('pause-icon');
+    this.volumeSlider = document.getElementById('volume-slider');
     this.leftCover = document.getElementById('left-cover');
     this.rightCover = document.getElementById('right-cover');
-    this.pausedText = document.getElementById('paused-text');
     this.bottomRow = document.getElementById('bottom-row');
-    this.movementButtons = document.getElementById('movement-buttons');
     this.rightHUD = document.getElementById('right-HUD');
     this.leftHUD = document.getElementById('left-HUD');
+    this.luncmanDiv = document.getElementById('luncman-div');
     this.deadFudders = [];
     this.isPanning = false;
     this.isMobile = this.checkIfMobile();
     this.highscoreDisplaySet = false;
-    this.paused = false;
     this.gameStarted = false;
     this.dotsEaten = 0;
     this.seventyPercent = null;
@@ -1955,18 +2624,21 @@ class GameCoordinator {
     this.boostTimeout = null; // initialize the boost timeout to null
     this.loadedLevels = {};
     this.abilities = [];
+    this.attackOnomat = null;
     this.waitingAbility = false; // waiting to create ability
-    this.pausedFrame = null;
     this.pickups = [];
     this.entityList = [];
     this.fudders = [];
-    this.fullReset = false;
-    this.username = "";
-    this.checkForUsername();
+    this.username = window.client.gloInfo.username;
     this.fuddersKilled = 0;
 
+    window.collateralCount = 1;
+
+    this.luncmanPositionHistory = [];
+    this.isRecordingLuncmanPosition = false;
+    this.historySizeLimit = 300; // Assuming 60 FPS, 5 seconds of history
+
     this.maxFps = 60;
-    this.firstGame = true;
     this.newHighscore = false;
     this.advancingLevel = false;
 
@@ -1990,9 +2662,9 @@ class GameCoordinator {
 
     this.fruitPoints = {
       1: 100,
-      2: 300,
-      3: 500,
-      4: 700,
+      2: 200,
+      3: 300,
+      4: 400,
       5: 1000,
       6: 2000,
       7: 3000,
@@ -2003,10 +2675,14 @@ class GameCoordinator {
 
     this.registerEventListeners();
 
-    this.pauseButton.addEventListener('click', this.handlePauseKey.bind(this));
     this.soundButton.addEventListener(
       'click',
       this.soundButtonClick.bind(this),
+    );
+
+    this.pauseButton.addEventListener(
+      'click',
+      this.pauseButtonClick.bind(this),
     );
 
     const head = document.getElementsByTagName('head')[0];
@@ -2029,7 +2705,9 @@ class GameCoordinator {
     const username = window.client.gloInfo.username;
     console.log('username', username)
 
-    if (username) {
+    const nameDisplay = document.getElementById('name-display');
+    if (username && nameDisplay) {
+      nameDisplay.innerText = username;
       this.username = username;
     }
   }
@@ -2105,31 +2783,17 @@ class GameCoordinator {
   *  Prevent player from leaving page mid-game
   */
    preventReload() {
-    window.addEventListener('beforeunload', (event) => {
+      window.addEventListener('beforeunload', (event) => {
       // Cancel the event as stated by the standard.
       event.preventDefault();
       // Chrome requires returnValue to be set.
       event.returnValue = '';
-     
-      // pauses game
-     if (this.allowPause) {
-       this.allowPause = false;
  
-       setTimeout(() => {
-         if (!this.cutscene) {
-           this.allowPause = true;
-         }
-       }, 500);
- 
-       this.gameEngine.changePausedState(this.gameEngine.running);
        this.soundManager.play('pause');
  
        if (this.gameEngine.started) {
          this.soundManager.resumeAmbience();
          this.gameUi.style.filter = 'unset';
-         this.movementButtons.style.filter = 'unset';
-         this.pausedText.style.visibility = 'hidden';
-         this.pauseButton.innerHTML = 'pause';
          this.activeTimers.forEach((timer) => {
            timer.resume();
          });
@@ -2137,16 +2801,9 @@ class GameCoordinator {
          this.soundManager.stopAmbience();
          this.soundManager.setAmbience('pause_beat', true);
          this.gameUi.style.filter = 'blur(5px)';
-         this.movementButtons.style.filter = 'blur(5px)';
-         this.pausedText.style.visibility = 'visible';
-         this.pauseButton.innerHTML = 'play_arrow';
-         this.activeTimers.forEach((timer) => {
-           timer.pause();
-         });
        }
-     }
-   });
- }
+    });
+  }
 
     // Send http request to server to check credits
     // handleCreditCheckClick() {
@@ -2190,11 +2847,10 @@ class GameCoordinator {
       }
 
       setNewWallet(walletAddress) {
-        this.sendWalletConnectRequest(walletAddress, true);
+        // this.sendWalletConnectRequest(walletAddress, true);
 
         // Form the new username by taking the first 5 and last 6 letters from walletAddress
-        const modifiedWalletAddress = walletAddress.substring(0, 5) + '..' + walletAddress.substring(walletAddress.length - 6);
-        this.nameDisplay.innerText = modifiedWalletAddress;
+        this.nameDisplay.innerText = window.client.gloInfo.username;
       }
       
       
@@ -2204,25 +2860,7 @@ class GameCoordinator {
     console.log('he disconnected')
   }
       
-  handleWalletConnected() {
-    if (!window.connectedWallet) {
-      setTimeout(() => {
-        this.handleWalletConnected();
-      }, 10);
-    } else {
-      console.log('wallet connected')
-      let walletAddress = window.connectedWallet.addresses['pisco-1'];
-      const modifiedWalletAddress = walletAddress.substring(0, 5) + '..' + walletAddress.substring(walletAddress.length - 6);
-      this.username = modifiedWalletAddress;
-      let username = window.client.gloInfo.username;
-      if (!username) {
-        this.setNewWallet(walletAddress);
-      } else {
-        this.sendWalletConnectRequest(walletAddress, false);
-        this.nameDisplay.innerText = modifiedWalletAddress;
-      }
-    }
-  }
+
   
   // sendWalletConnectRequest(walletAddress, checkIfExists) {
   //   const Http = new XMLHttpRequest();
@@ -2245,103 +2883,44 @@ class GameCoordinator {
   //   Http.send(params);
   // }
 
-  sendWalletConnectRequest(walletAddress, checkIfExists) {
-    const Http = new XMLHttpRequest();
+  // sendWalletConnectRequest(walletAddress, checkIfExists) {
+  //   const Http = new XMLHttpRequest();
   
-    const params = JSON.stringify({ walletID: walletAddress });
+  //   const params = JSON.stringify({ walletID: walletAddress });
   
-    Http.open("POST", "/newplayer");
-    Http.setRequestHeader("Content-Type", "application/json");
+  //   Http.open("POST", "/newplayer");
+  //   Http.setRequestHeader("Content-Type", "application/json");
   
-    Http.onreadystatechange = (e) => {
-        if (Http.readyState === XMLHttpRequest.DONE) {
-            const response = JSON.parse(Http.response);
+  //   Http.onreadystatechange = (e) => {
+  //       if (Http.readyState === XMLHttpRequest.DONE) {
+  //           const response = JSON.parse(Http.response);
             
-            if (Http.status === 200) {
-                // Successful response, set the client information
-                window.client.createGloSession(response);
-                console.log(Http.response);
-                // The token is now securely stored as an HTTP cookie
-            } else {
-                // Handle error scenarios based on the error message returned from the server
-                console.error('Error:', response.error);
-            }
-        }
-    };
+  //           if (Http.status === 200) {
+  //               // Successful response, set the client information
+  //               window.client.createGloSession(response);
+  //               console.log(Http.response);
+  //               // The token is now securely stored as an HTTP cookie
+  //           } else {
+  //               // Handle error scenarios based on the error message returned from the server
+  //               console.error('Error:', response.error);
+  //           }
+  //       }
+  //   };
 
-    console.log('CookieStorage:', params);
-    Http.send(params);
-  }
-
-  startGameSequence() {
-    if (window.luncMachine.gameCoordinator.isMobile) {
-      window.luncMobile.toggleHideElements();
-    } else {
-      window.videoBackground.transitionTo("main_play", () => {
-        window.videoBackground.loadVideos("play_main");
-      });
-    }
-  }  
+  //   console.log('CookieStorage:', params);
+  //   Http.send(params);
+  // }
      
   /**
    * Reveals the game underneath the loading covers and starts gameplay
    */
   startButtonClick() {
     this.setLevel(this.firstLevelData);
-    this.leftCover.style.left = '-50%';
-    this.rightCover.style.right = '-50%';
-    this.leftCover.style.visibility = 'hidden';
-    this.rightCover.style.visibility = 'hidden';
-    this.mainMenu.style.opacity = 0;
     this.gameStartButton.disabled = true;
 
-    /**
-     * Prevents player from accidentally refreshing page mid-game
-           vvvvvvv       */
+    this.reset(this.firstLevelData);
+    this.init();
 
-    window.addEventListener('beforeunload', (event) => {  
-      // pauses game
-     if (this.allowPause) {
-       this.allowPause = false;
- 
-       setTimeout(() => {
-         if (!this.cutscene) {
-           this.allowPause = true;
-         }
-       }, 500);
- 
-       this.gameEngine.changePausedState(this.gameEngine.stop);
-       this.soundManager.play('pause');
- 
-         this.soundManager.stopAmbience();
-         this.soundManager.setAmbience('pause_beat', true);
-         this.gameUi.style.filter = 'blur(5px)';
-         this.pausedText.style.visibility = 'visible';
-         this.pauseButton.innerHTML = 'play_arrow';
-         this.activeTimers.forEach((timer) => {
-           timer.pause();
-         });
-       }
-      // Cancel the event as stated by the standard.
-      event.preventDefault();
-      // Chrome requires returnValue to be set.
-      event.returnValue = '';
-     }
-   );
-   
-
-    setTimeout(() => {
-      this.mainMenu.style.visibility = 'hidden';
-    }, 1000);
-
-    if (this.firstGame) {
-      this.reset(this.firstLevelData);
-      this.firstGame = false;
-      this.init();
-    }
-    if (this.fullReset) {
-      this.fullReset = false;
-    }
     this.startGameplay(true);
   }
   
@@ -2351,18 +2930,78 @@ class GameCoordinator {
    * Toggles the master volume for the soundManager, and saves the preference to storage
    */
   soundButtonClick() {
-    const newVolume = this.soundManager.masterVolume === 0.05 ? 0 : 0.05;
+    console.log('sound button clicked')
+    let newVolume;
+    if (this.previousVolume) { 
+      if (this.soundVolume === 0) {
+        newVolume = this.previousVolume;
+      } else {
+        newVolume = 0;
+        this.previousVolume = this.soundVolume;
+      }
+    } else {
+      this.previousVolume = this.soundVolume;
+      newVolume = this.savedVolume === 0 ? 1 : 0;
+    }
+    this.savedVolume = newVolume;
     this.soundManager.setMasterVolume(newVolume);
-    this.soundManager.setMusic(`music/music${this.level}`, false);
+    this.soundManager.setMusicVolume(newVolume);
+    if (this.soundManager.musicPlaying) {
+      this.soundManager.pauseMusic();
+      this.musicPaused = true;
+    } else {
+      if (this.musicPaused) {
+        this.soundManager.resumeMusic();
+        this.musicPaused = false;
+      } else {
+        this.soundManager.setMusic(`music/phonk${this.level}`, true);
+      }
+    }
     localStorage.setItem('volumePreference', newVolume);
-    this.setSoundButtonIcon(newVolume);
+    this.setSoundButtonIcon();
+    this.setPauseButtonIcon();
+  }
+
+  pauseButtonClick() {
+    // check if music is playing
+    const musicPaused = localStorage.getItem('musicPaused') || 'false';
+    if (musicPaused === 'false') {
+      this.soundManager.pauseMusic(false);
+    } else {
+      this.soundManager.resumeMusic();
+    }
+    this.setPauseButtonIcon();
+  }
+
+  setVolume() {
+    console.log('setting master volume to', this.savedVolume)
+    this.soundManager.setMasterVolume(this.savedVolume);
+    this.soundManager.setMusicVolume(this.savedVolume);
+
+    localStorage.setItem('volumePreference', this.savedVolume);
+    this.setSoundButtonIcon();
   }
 
   /**
    * Sets the icon for the sound button
    */
-  setSoundButtonIcon(newVolume) {
-    this.soundButton.innerHTML = newVolume === 0 ? 'volume_off' : 'volume_up';
+  setSoundButtonIcon() {
+    if (document.getElementById('header-buttons')) document.getElementById('header-buttons').style.visibility = 'visible';
+    const iconSrc = this.savedVolume === 0 ? '/style/graphics/volume_off.webp' : '/style/graphics/volume_on.webp';
+    this.volumeIcon.src = iconSrc;
+  }
+
+  setPauseButtonIcon(start) {
+    const musicPaused = localStorage.getItem('musicPaused');
+    if (!musicPaused) localStorage.setItem('musicPaused', 'false');
+    let iconSrc;
+    if (musicPaused === 'true') {
+      iconSrc = '/style/graphics/sound_play.webp';
+    } else {
+      iconSrc = '/style/graphics/sound_pause.webp';
+    }
+    console.log('setting pause icon to', iconSrc, 'because music paused is', musicPaused)
+    this.pauseIcon.src = iconSrc;
   }
 
   /**
@@ -2379,16 +3018,59 @@ class GameCoordinator {
     }, 1500);
   }
 
+  async preloadOnomatAssets() {
+    // preload onomatopoeia elements
+    const onomatBase = '/style/graphics/onomatopoeia/';
+    const onomatTypes = {
+      'attack': [`${onomatBase}attack+1.webp`, `${onomatBase}attack+2.webp`, `${onomatBase}attack+3.webp`],
+      'hit': [`${onomatBase}normal_attack.webp`],
+      'newLife': [`${onomatBase}1up.webp`],
+      'crit': [`${onomatBase}critical_attack.webp`],
+      'scared': [`${onomatBase}scared_attack.webp`],
+      'scaredCrit': [`${onomatBase}scared_critical_attack.webp`],
+      'eat': [`${onomatBase}eat.webp`],
+      'gloUp': [`${onomatBase}gloup.webp`],
+      'collat': [`${onomatBase}collateral.webp`],
+      'chain': [`${onomatBase}chained.webp`, `${onomatBase}chainsmoked.webp`],
+      'kill': [`${onomatBase}normal_kill_1.webp`, `${onomatBase}normal_kill_2.webp`, `${onomatBase}normal_kill_3.webp`, `${onomatBase}normal_kill_4.webp`],
+      'scaredKill': [`${onomatBase}scared_attack.webp`],
+      '$coin': [`${onomatBase}btc.webp`, `${onomatBase}btc100.webp`, `${onomatBase}atom.webp`, `${onomatBase}atom200.webp`, `${onomatBase}eth.webp`, `${onomatBase}eth300.webp`, `${onomatBase}sol.webp`, `${onomatBase}sol400.webp`]
+    };
+    const onomatSources = [].concat(...Object.values(onomatTypes));
+    const onomatImages = await this.createGameElements(onomatSources, 'img');
+    this.categorizeLoadedImages(onomatImages, onomatTypes);
+  }
+
+  categorizeLoadedImages(loadedImages, onomatTypes) {
+    console.log('preloaded onomat images', loadedImages.map(img => img.src));
+    const categorizedImages = {};
+    Object.keys(onomatTypes).forEach(type => {
+      const orderedImages = onomatTypes[type].map(path => {
+        const fileName = path.split('/').pop(); // Get the filename part of the path
+        return loadedImages.find(img => img.src.includes(fileName));
+      });
+      categorizedImages[type] = orderedImages;
+    });
+    this.onomatImages = categorizedImages;
+    console.log('categorizedImages', categorizedImages); // Check how images are categorized now
+  }
+  
+
   /**
    * Load all assets into a hidden Div to pre-load them into memory.
    * There is probably a better way to read all of these file names.
    */
   preloadAssets() {
+    this.gameUi.style.visibility = 'hidden';
+    this.mainMenu.style.opacity = 1;
+    this.mainMenu.style.visibility = 'visible';
     return new Promise((resolve) => {
       const loadingContainer = document.getElementById('loading-container');
       const loadingLuncman = document.getElementById('loading-luncman');
       console.log('loading luncman:', loadingLuncman)
       const loadingDotMask = document.getElementById('loading-dot-mask');
+
+      this.preloadOnomatAssets();
 
       const imgBase = '/style/graphics/spriteSheets/';
       const imgSources = [
@@ -2507,12 +3189,8 @@ class GameCoordinator {
         `${audioBase}game_start.mp3`,
         `${audioBase}pause.mp3`,
         `${audioBase}pause_beat.mp3`,
-        `${audioBase}siren_1.mp3`,
-        `${audioBase}siren_2.mp3`,
-        `${audioBase}siren_3.mp3`,
         `${audioBase}power_up.mp3`,
         `${audioBase}extra_life.mp3`,
-        `${audioBase}eyes.mp3`,
         `${audioBase}eat_fudder.mp3`,
         `${audioBase}death.mp3`,
         `${audioBase}fruit.mp3`,
@@ -2520,7 +3198,7 @@ class GameCoordinator {
         `${audioBase}dot_2.mp3`,
         `${audioBase}attack.mp3`,
         `${audioBase}boost.mp3`,
-        `${audioBase}super_attack.mp3`,
+        `${audioBase}superattack.mp3`,
         `${audioBase}fud_hurt.mp3`,
         `${audioBase}game_over.mp3`,
         `${audioBase}luncman_death.mp3`,
@@ -2544,8 +3222,6 @@ class GameCoordinator {
 
           setTimeout(() => {
             loadingContainer.remove();
-            this.mainMenu.style.opacity = 1;
-            this.mainMenu.style.visibility = 'visible';
           }, 1500);
         })
         .catch(this.displayErrorMessage);
@@ -2610,11 +3286,7 @@ class GameCoordinator {
             console.log("Username updated:", Http.response);
   
             // Update the nameDisplay and local storage with the new username
-            this.nameDisplay.innerText = newUsername;
-            localStorage.setItem("username", newUsername);
-  
-            // Show an alert to inform the user
-            alert("Successfully set username: " + newUsername);
+            this.nameDisplay.innerText = window.client.gloInfo.username;
 
             
           } else if (Http.status === 409) {
@@ -2699,33 +3371,53 @@ class GameCoordinator {
   }  
 
   createGameElements(sources, type) {
+    console.log('creating game elements', sources)
     return new Promise((resolve, reject) => {
       let loadedSources = 0;
-  
+      let loadedElements = [];
+
       sources.forEach((source) => {
-        const element = type === 'img' ? new Image() : new Audio();
+        let element;
+        if (type === 'img') {
+          element = new Image();
+        } else if (type === 'audio') {
+          element = new Audio();
+        } else if (type === 'video') {
+          element = document.createElement('video');
+          console.log('set up video element')
+        }
+
         const preloadDiv = document.getElementById('preload-div');
         preloadDiv.appendChild(element);
-  
+        console.error('readying elements')
+
         const elementReady = () => {
+          console.log('calling elementReady')
           loadedSources += 1;
           console.log(`Loaded ${type}:`, source);
-  
+
+          loadedElements.push(element);
+
           if (loadedSources === sources.length) {
-            resolve();
+            console.log('returning loaded video')
+            resolve(type === 'video' ? loadedElements[0] : loadedElements);
           }
         };
-  
+        console.log('random shit fuck it')
+
         if (type === 'img') {
           element.onload = elementReady;
           element.onerror = reject;
-        } else {
+        } else if (type === 'video') {
+          element.onloadeddata = elementReady;
+          element.onerror = reject;
+        } else if (type === 'audio') {
           element.addEventListener('canplaythrough', elementReady);
           element.onerror = reject;
         }
-  
+
         element.src = source;
-  
+
         if (type === 'audio') {
           element.load();
         }
@@ -2740,17 +3432,18 @@ class GameCoordinator {
     this.activeTimers = [];
     this.points = 0;
     this.level = 1;
-    this.lives = 2;
+    this.lives = 0;
     this.fruitEaten = 0;
     this.extraLifeGiven = false;
     this.remainingDots = 0;
     this.allowKeyPresses = true;
     this.allowLuncmanMovement = false;
-    this.allowPause = false;
     this.cutscene = true;
     this.newHighscore = false;
     this.playAgain = false;
     this.gameStarted = false;
+    this.fuddersKilled = 0;
+    this.dotsEaten = 0;
 
     this.tileSize = 8;
     this.scale = this.determineScale(1, 31, 28);
@@ -2758,100 +3451,93 @@ class GameCoordinator {
     this.scaledTileSize = this.tileSize * this.scale;
     console.log('scaled tile size:', this.scaledTileSize);
 
-    /*const url = 'http://localhost:8014/highscore';
+    this.highScore = window.client.gloInfo.highscore;
+    this.highScoreDisplay.innerHTML = this.highScore || '00';
+    
+    setInterval(() => {
+      this.collisionDetectionLoop();
+    }, 500);
 
-    function getHighscore() {
-      return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onreadystatechange = function() {
-          if (xhr.readyState === XMLHttpRequest.DONE) {
-            if (xhr.status === 200) {
-              const response = JSON.parse(xhr.responseText);
-              const highscore = response.highscore;
-              resolve(highscore);
-              console.log(highscore);
-            } else {
-              reject(new Error('Failed to retrieve highscore'));
-            }
-          }
-        };
-        xhr.open('GET', url);
-        xhr.send();
-      })
+    if (this.luncman) {
+      this.luncman.reset();
+      this.luncman = null;
     }
-    
-    // Example usage:
-    getHighscore().then(highscore => {
-      this.highScore = highscore;
-      this.highScoreDisplay.innerHTML = this.highScore || '00';
-    }).catch(error => {
-      console.error('Error:', error.message);
-    })*/
-    
- 
-    
-    if (this.firstGame) {
-      setInterval(() => {
-        this.collisionDetectionLoop();
-      }, 500);
-
-      this.luncman = new Luncman(
-        this.scaledTileSize,
-        new CharacterUtil(this),
-        levelData,
-      );
-      this.fudder1 = new Fudder(
-        this.scaledTileSize,
-        this.mazeArray,
-        this.luncman,
-        'fudder1',
-        this.level,
-        new CharacterUtil(this),
-        this.fudder1,
-        levelData,
-      );
-      this.fudder2 = new Fudder(
-        this.scaledTileSize,
-        this.mazeArray,
-        this.luncman,
-        'fudder2',
-        this.level,
-        new CharacterUtil(this),
-        this.fudder1,
-        levelData,
-      );
-      this.fudder3 = new Fudder(
-        this.scaledTileSize,
-        this.mazeArray,
-        this.luncman,
-        'fudder3',
-        this.level,
-        new CharacterUtil(this),
-        this.fudder1,
-        levelData,
-      );
-      this.fudder4 = new Fudder(
-        this.scaledTileSize,
-        this.mazeArray,
-        this.luncman,
-        'fudder4',
-        this.level,
-        new CharacterUtil(this),
-        this.fudder1,
-        levelData,
-      );
-      const fruitPosition = levelData.fruitPosition;
-      this.fruit = new Pickup(
-        'fruit',
-        this.scaledTileSize,
-        fruitPosition.x,
-        fruitPosition.y,
-        this.luncman,
-        this.mazeDiv,
-        100,
-        levelData
-      );
+    this.luncman = new Luncman(
+      this.scaledTileSize,
+      new CharacterUtil(this),
+      levelData,
+    );
+    if (this.fudder1) {
+      this.fudder1.reset();
+      this.fudder1 = null;
     }
+    this.fudder1 = new Fudder(
+      this.scaledTileSize,
+      this.mazeArray,
+      this.luncman,
+      'fudder1',
+      this.level,
+      new CharacterUtil(this),
+      this.fudder1,
+      levelData,
+    );
+    if (this.fudder2) {
+      this.fudder2.reset();
+      this.fudder2 = null;
+    }
+    this.fudder2 = new Fudder(
+      this.scaledTileSize,
+      this.mazeArray,
+      this.luncman,
+      'fudder2',
+      this.level,
+      new CharacterUtil(this),
+      this.fudder1,
+      levelData,
+    );
+    if (this.fudder3) {
+      this.fudder3.reset();
+      this.fudder3 = null;
+    }
+    this.fudder3 = new Fudder(
+      this.scaledTileSize,
+      this.mazeArray,
+      this.luncman,
+      'fudder3',
+      this.level,
+      new CharacterUtil(this),
+      this.fudder1,
+      levelData,
+    );
+    if (this.fudder4) {
+      this.fudder4.reset();
+      this.fudder4 = null;
+    }
+    this.fudder4 = new Fudder(
+      this.scaledTileSize,
+      this.mazeArray,
+      this.luncman,
+      'fudder4',
+      this.level,
+      new CharacterUtil(this),
+      this.fudder1,
+      levelData,
+    );
+    const fruitPosition = levelData.fruitPosition;
+    if (this.fruit) {
+      this.fruit.reset();
+      this.fruit = null;
+    }
+    this.fruit = new Pickup(
+      'fruit',
+      this.scaledTileSize,
+      fruitPosition.x,
+      fruitPosition.y,
+      this.luncman,
+      this.mazeDiv,
+      100,
+      levelData
+    );
 
     this.entityList = [
       this.luncman,
@@ -2863,41 +3549,33 @@ class GameCoordinator {
     ];
 
     this.fudders = [this.fudder1, this.fudder2, this.fudder3, this.fudder4];
+    this.deadFudders = [];
 
     this.scaredFudders = [];
     this.eyeFudders = 0;
 
-    if (this.firstGame) {
-      this.drawMaze(this.mazeArray, this.entityList, levelData);
-      this.soundManager = new SoundManager();
-      this.setUiDimensions();
-    } else {
-      this.luncman.levelData = this.firstLevelData;
-      this.luncman.reset();
-      console.log('resetting luncman')
-      this.fudders.forEach((fudder) => {
-        fudder.levelData = this.firstLevelData;
-        fudder.reset(true);
-      });
-      this.pickups.forEach((pickup) => {
-        pickup.levelData = this.firstLevelData;
-        if (pickup.type !== 'fruit') {
-          this.remainingDots += 1;
-          pickup.reset();
-          this.entityList.push(pickup);
-        }
-      });
+    this.drawMaze(this.mazeArray, this.entityList, levelData);
+    this.soundManager = new SoundManager();
+
+    this.savedVolume = parseFloat(localStorage.getItem('volumePreference')) || 0;
+    this.setVolume();
+    this.setSoundButtonIcon();
+    this.setPauseButtonIcon(true);
+    // this.pauseButton.src = '/style/graphics/sound_pause.webp';
+
+    this.setUiDimensions();
+
+    if (this.gameEngine) {
+      this.gameEngine.restart();
     }
 
     this.pointsDisplay.innerHTML = '00';
     this.clearDisplay(this.fruitDisplay);
 
     const volumePreference = parseInt(
-      localStorage.getItem('volumePreference') || 0.05,
+      localStorage.getItem('volumePreference') || 1,
       10,
     );
-    this.setSoundButtonIcon(volumePreference);
-    this.soundManager.setMasterVolume(volumePreference);
   }
 
   /**
@@ -2938,7 +3616,7 @@ class GameCoordinator {
       coinPic.style.zIndex = '1';
     }
 
-    if (this.isMobile && this.firstGame) {
+    if (this.isMobile) {
       const mFudContainer = document.getElementById('mobile-fud-container');
       const lHud = document.getElementById('left-HUD');
       const pfp = document.getElementById('pfp');
@@ -2973,6 +3651,7 @@ class GameCoordinator {
       nameDisplay.style.position = 'absolute';
       nameDisplay.style.left = '50%';
       nameDisplay.style.transform = 'translateX(-50%)';
+      nameDisplay.innerText = window.client.gloInfo.username;
       
       const pointsDisplayDiv = document.createElement('div');
       pointsDisplayDiv.appendChild(this.pointsDisplay);
@@ -3001,7 +3680,7 @@ class GameCoordinator {
         const block = row[columnIndex];
             if (block === 'o' || block === 'O') {
               const type = block === 'o' ? 'luncdot' : 'powerPellet';
-              const points = block === 'o' ? 10 : 50;
+              const points = block === 'o' ? 1 : 5;
               const dot = new Pickup(
                 type,
                 this.scaledTileSize,
@@ -3166,9 +3845,18 @@ class GameCoordinator {
    * @param {Boolean} initialStart - Special condition for the game's beginning
    */
   startGameplay(initialStart) {
+    this.checkForUsername();
+    console.log('starting gameplay, initial =', initialStart)
     this.soundManager.fetchingAmbience = false;
     this.soundManager.cutscene = false;
-    this.soundManager.setMusic(`music/music${this.level}`, false);
+    const musicPaused = localStorage.getItem('musicPaused') || 'false';
+    if (musicPaused === 'false') {
+      this.soundManager.setMusic(`music/phonk${this.level}`, false);
+    } else {
+      this.soundManager.setMusic(`music/phonk${this.level}`, false);
+      this.soundManager.pauseMusic(true);
+    }
+    console.log('set music to phonk', this.level)
 
     const rHud = document.getElementById('right-HUD');
     const bottomRow = document.getElementById('bottom-row');
@@ -3192,15 +3880,17 @@ class GameCoordinator {
     const height = this.scaledTileSize;
 
     this.displayText({ left, top }, 'ready', duration, width, height);
+    console.log('displaying ready text', 'duration:', duration, 'width:', width, 'height:', height, 'left:', left, 'top:', top)
+    this.soundManager.play('ready');
     this.updateExtraLivesDisplay();
 
     new Timer(() => {
       this.mazeCover.style.visibility = 'hidden';
       new Timer(() => {
-      this.allowPause = true;
       this.cutscene = false;
-      this.soundManager.setCutscene(this.cutscene);
+      // this.soundManager.setCutscene(this.cutscene);
       //this.soundManager.setAmbience(this.determineSiren(this.remainingDots));
+      this.soundManager.play('start');
 
       this.allowLuncmanMovement = true;
       this.luncman.moving = true;
@@ -3212,23 +3902,61 @@ class GameCoordinator {
 
       this.fudderCycle('scatter');
 
-      this.idleFudders = [this.fudder2, this.fudder3, this.fudder4];
-      this.releaseFudder();
-
-      if (initialStart || this.dead || this.advancingLevel) {
-        this.createAbility();
+      // determine the alive and idle fudders
+      if (initialStart) {
+        this.idleFudders = [this.fudder2, this.fudder3, this.fudder4];
+        this.aliveFudders = [this.fudder1, this.fudder2, this.fudder3, this.fudder4];
+      } else {
+        this.fudders.forEach((fudder) => {
+          if (!fudder.dead) {
+            this.aliveFudders.push(fudder);
+            if (fudder !== this.fudder1) {
+              this.idleFudders.push(fudder);
+            }
+          }
+        });
       }
+
+      this.releaseFudder();
+      this.createAbility();
 
       this.gameStarted = true;
       this.gameState.gameStarted = true;
       this.gameState.sendGameState();
       this.dead = false;
 
+      this.startRecordingLuncmanHistory();
+      this.startedRecordingPosition = true; // Prevent multiple recordings
+
+      this.burnLunc();
+
+      if (this.level === 1 && window.firstVisit && !this.tutorialPlayed) this.playTutorial();
+
       if (this.advancingLevel) {
         this.advancingLevel = false;
       }
       }, 0);
     }, duration);
+  }
+
+  burnLunc() {
+    if (!this.gameStarted) return;
+    if (this.points > 0) {
+      if (this.level > 2) {
+        this.points -= 2;
+      } else {
+        this.points -= 1;
+      }
+      this.pointsDisplay.innerText = this.points;
+      if (this.points > (this.highScore || 0)) {
+          this.highScore = this.points;
+          this.highScoreDisplay.innerText = this.points;
+      }
+      console.log('removed', this.level, 'points from score')
+    }
+    setTimeout(() => {
+      this.burnLunc();
+    }, 1000);
   }
 
   createAbility() {
@@ -3242,6 +3970,12 @@ class GameCoordinator {
   giveAbility() {
     if (this.gameStarted) {
       if (this.luncman.attackCount < 3) {
+        if (this.attackOnomat) {
+          this.attackOnomat.removeOnomat();
+          this.attackOnomat = null;
+        }
+        const abilityImageIndex = this.abilities.length - 1;
+        this.attackOnomat = new Onomat('attack', abilityImageIndex);
         this.luncman.giveAttack();
         this.updateGameState();
       }
@@ -3256,9 +3990,17 @@ class GameCoordinator {
           }
         } else {
           console.log('Not all abilities are complete. Waiting for 100ms before checking again.');
-          setTimeout(() => this.giveAbility(), 100);
+          setTimeout(() => this.giveAbility(), 10);
         }
       }
+  }
+
+  resetAbilities() {
+    // Iterate over the abilities array and call removeAbility() on each
+    this.abilities.forEach(ability => ability.removeAbility());
+
+    // Once all abilities are removed, reset the abilities array to an empty array
+    this.abilities = [];
   }
 
   /**
@@ -3384,8 +4126,27 @@ class GameCoordinator {
     window.addEventListener('attackFudder', this.attackFudder.bind(this));
     window.addEventListener('killFudder', this.killFudder.bind(this));
     window.addEventListener('abilityComplete', this.giveAbility.bind(this));
-    window.addEventListener('WalletConnected', () => this.handleWalletConnected());
+    // window.addEventListener('WalletConnected', () => this.handleWalletConnected());
     window.addEventListener('WalletDisconnected', this.handleWalletDisconnected(this));
+    window.addEventListener('receivedPlayerNfts', this.handlePlayerNfts(this));
+
+    window.addEventListener('sessionCreated', () => {
+      this.checkForUsername(this);
+      this.initGameState();
+    });
+    
+    if (this.volumeSlider) this.volumeSlider.addEventListener('input', () => {
+      this.savedVolume = this.volumeSlider.value;
+      this.setVolume();
+    });
+    
+    if (this.soundControl) this.soundControl.addEventListener('mouseenter', () => {
+      this.toggleVolumeSlider();
+    });
+    
+    if (this.soundControl) this.soundControl.addEventListener('mouseleave', () => {
+      this.toggleVolumeSlider();
+    });
     
     if (this.isMobile) {
       this.setupSwipeListeners();
@@ -3394,11 +4155,17 @@ class GameCoordinator {
       window.addEventListener('orientationchange', this.orientationChange.bind(this));
     }
   }
+
+  toggleVolumeSlider() {
+    this.volumeSlider.style.display = this.volumeSlider.style.display === 'none' ? 'block' : 'none';
+  }
   
   changeDirection(direction) {
     if (this.isPanning && this.direction === direction) {
       return;  // If panning and the direction is the same as the current, do nothing
     }
+
+    if (this.finalizingChain) return;
     
     if (this.allowKeyPresses && this.gameEngine.running) {
       // check for double-click
@@ -3411,8 +4178,11 @@ class GameCoordinator {
       }
       if (this.lastDirectionKey === direction && this.doubleClickTimeout !== null && (currentTime - this.doubleClickTimeout) < clickTimeout) {
         if (this.boostTimeout === null || (currentTime - this.boostTimeout) >= 500) {
+          // emit 'speedBoost' event
+          window.dispatchEvent(new Event('speedBoost'));
+
           this.luncman.getSpeedBoost();
-          this.soundManager.play('boost');
+          if (this.luncman.moving) this.soundManager.play('dash');
           this.boostTimeout = currentTime; // update the boost timeout
         }
         this.lastDirectionKey = null;
@@ -3425,9 +4195,50 @@ class GameCoordinator {
     }
   }
 
-  orientationChange() {
-    if (this.gameStarted && !this.paused) {
-      this.handlePauseKey();
+  handlePlayerNfts() {
+    if (window.client.activePlayer || !window.client.gloSession) return;
+
+    if (!this.luncman) {
+      setTimeout(() => {
+        this.handlePlayerNfts();
+      }, 100);
+      return;
+    }
+
+    if (window.client.gloInfo.activeLuncman) {
+      // preload the luncman game images
+      // Extract all the image URLs from this.luncman.imageSources
+      let imageUrls = [];
+      for (let category in this.luncman.imageSources) {
+        for (let direction in this.luncman.imageSources[category]) {
+          imageUrls.push('/style/graphics/' + this.luncman.imageSources[category][direction]);
+        }
+      }
+
+      // Preload the images
+      this.createGameElements(imageUrls, 'img').then((loadedImages) => {
+        console.log('All images loaded');
+      }).catch((error) => {
+        console.error('Error loading images:', error);
+      });
+
+      // set image sources
+      this.luncman.setSpriteSheetSources();
+    }
+
+    if (window.client.gloInfo.activeVictory) {
+      let imageUrls = [];
+      imageUrls.push('/style/graphics' + window.client.gloInfo.activeVictory.metadata.mainImg);
+      // Preload the images
+      this.createGameElements(imageUrls, 'img').then((loadedImages) => {
+        this.victoryImage = "style/graphics" + window.client.gloInfo.activeVictory.metadata.mainImg;
+        console.log('All images loaded');
+      }).catch((error) => {
+        this.victoryImage = "/style/graphics/winning_screen.webp";
+        console.error('Error loading images:', error);
+      });
+    } else {
+      this.victoryImage = "/style/graphics/winning_screen.webp";
     }
   }
 
@@ -3618,85 +4429,22 @@ class GameCoordinator {
    * @param {Event} e - The keydown event to evaluate
    */
   handleKeyDown(e) {
-    if (e.keyCode === 27) {
-      // ESC key
-      this.handlePauseKey();
-    } else if (e.keyCode === 69) {
-      // E
-      this.handlePauseKey();
-    } else if (e.keyCode === 16) {
-      // Shift key
-      this.fuddersKilled = 3;
-    } else if (e.keyCode === 81) {
-      // Q
-      this.soundButtonClick();
-    } else if (e.keyCode === 32) {
-      console.log('playing cutscene:', this.playingCutscene);
-      // Spacebar
-      if (this.playingCutscene) {
-        this.skipCutscene();
-      } else {
-        this.useAbility();
-      }
-    }else if (this.movementKeys[e.keyCode]) {
-      this.changeDirection(this.movementKeys[e.keyCode]);
-    }
-  }
-
-  /**
-   * Handle behavior for the pause key
-   */
-  handlePauseKey() {
-    if (this.allowPause) {
-      this.allowPause = false;
-  
-      setTimeout(() => {
-        if (!this.cutscene) {
-          this.allowPause = true;
+    switch (e.keyCode) {
+      case 32:
+        // Spacebar
+        if (this.gameStarted) e.preventDefault();
+        if (this.playingCutscene) {
+          this.cutsceneHinted = true;
+          this.skipCutscene();
+        } else {
+          this.useAbility();
         }
-      }, 500);
-  
-      this.gameEngine.changePausedState(this.gameEngine.running);
-      this.soundManager.play('pause');
-  
-      if (this.gameEngine.started) {
-        this.soundManager.resumeAmbience();
-        this.soundManager.resumeMusic();
-        this.contentContainer.style.filter = 'unset';
-        this.pausedText.style.visibility = 'hidden';
-        this.pauseButton.innerHTML = 'pause';
-        this.paused = false;
-        
-        // Resume all abilities
-        this.abilities.forEach((ability) => {
-          if (ability.paused) {
-            ability.togglePause();
-          }
-        });
-
-        this.activeTimers.forEach((timer) => {
-          timer.resume();
-        });
-      } else {
-        this.soundManager.stopAmbience();
-        this.soundManager.stopMusic();
-        this.soundManager.setAmbience('pause_beat', true);
-        this.contentContainer.style.filter = 'blur(5px)';
-        this.pausedText.style.visibility = 'visible';
-        this.pauseButton.innerHTML = 'play_arrow';
-        this.paused = true;
-
-        // Pause all abilities
-        this.abilities.forEach((ability) => {
-          if (!ability.paused) {
-            ability.togglePause();
-          }
-        });
-
-        this.activeTimers.forEach((timer) => {
-          timer.pause();
-        });
-      }
+        break;
+      default:
+        if (this.movementKeys[e.keyCode]) {
+          this.changeDirection(this.movementKeys[e.keyCode]);
+        }
+        break;
     }
   }
 
@@ -3704,25 +4452,43 @@ class GameCoordinator {
    * Handles behavior for the attack key
    */
   useAbility() {
-    if (this.luncman.attack || !this.gameStarted || this.paused) {
+    if (!this.gameStarted || this.luncman.attack || this.finalizingChain) {
       return;
     }
   
     if (this.luncman.attackCount > 0) {
       // Restart ability creation loop after reaching max amount
-      if (this.luncman.attackCount == 3) {
-        console.log('creating ability')
+      if (this.luncman.attackCount === 3) {
+        console.log('creating ability');
         this.createAbility();
       }
+
+      if (this.attackOnomat) {
+        this.attackOnomat.removeOnomat();
+        this.attackOnomat = null;
+        const abilityImageIndex = this.luncman.attackCount - 2;
+        console.log('ability length', abilityImageIndex);
+        this.attackOnomat = new Onomat('attack', abilityImageIndex);
+      }
+
+      // emit 'useAbility' event
+      window.dispatchEvent(new Event('useAbility'));
 
       this.luncman.getAttack();
       this.updateGameState();
 
       this.gameState.playerStats.attacksUsed += 1;
 
+      window.attackId = Math.random();
+
       // dispatch 'attacking' event
       window.dispatchEvent(new CustomEvent('attacking'));
-      this.soundManager.play('attack');
+      
+      if (this.gloPilled) {
+        this.soundManager.play('superattack');
+      } else {
+        this.soundManager.play('attack');
+      }
   
       // Get the ability with the lowest index (the first ability in the abilities array).
       const usedAbility = this.abilities[0];
@@ -3748,19 +4514,276 @@ class GameCoordinator {
     this.gameState.playerStats.attacksHit += 1;
   }
 
-  killFudder() {
-    this.fuddersKilled += 1;
-    this.gameState.playerStats.fuddersKilled += 1;
-    this.soundManager.play('fud_death');
+  killFudder(e) {
+    // Increment chain count
+    this.chainCount++;
+
+    this.fuddersKilled ++;
+    this.gameState.playerStats.fuddersKilled ++;
+    this.soundManager.play('fudderkill');
+
+    // if window.attackCount is used twice in 
 
     // Add the killed Fudder to the deadFudders array
-    const killedFudder = event.detail.fudder;
+    const killedFudder = e?.detail.fudder;
+    console.log('killed fudder', killedFudder)
     this.deadFudders.push(killedFudder);
 
-    if (this.deadFudders.length === this.fudders.length) {
-        this.deadFudders = []; // reset the dead fudders list
-        this.advanceLevel();
+    // If collateralTimer is not running, start it
+    this.noCollateral = false;
+    if (this.attackId !== window.attackId) {
+      this.attackId = window.attackId;
+      this.collateralCount = 1; // Start collateral count
+      console.log('no collateral')
+      this.collateralTimer = null;
+      this.collateralCount = 0;
+      this.noCollateral = true;
+  
+      if (!this.killFudderTimeout) {
+        console.log('!this.killFudderTimeouT', this.noCollateral);
+        setTimeout(() => {
+          if (this.noCollateral) {
+            console.log('normal kill');
+            new Onomat('kill')
+            let points;
+            if (killedFudder.totalHealth === 250) {
+              points = Math.round(( killedFudder.startHealth / killedFudder.totalHealth ) * 50);
+            } else {
+              points = Math.round(( killedFudder.startHealth / killedFudder.totalHealth ) * 25);
+            }
+            
+            window.dispatchEvent(
+              new CustomEvent('awardPoints', {
+                detail: {
+                  points: points,
+                },
+              }),
+            );
+          };
+          this.killFudderTimeout = setTimeout(() => {
+            console.log('Timeout started');
+            this.finalizeChain(this.chainCount);
+            // Reset chain count
+  
+            this.killFudderTimeout = null;
+            console.log('First timeout ended'); // Log when the first timeout ends
+          }, 1500);
+        }, 150);
+        } else {
+            clearTimeout(this.killFudderTimeout);
+            this.killFudderTimeout = setTimeout(() => {
+              console.log('Timeout started');
+              this.finalizeChain(this.chainCount);
+              // Reset chain count
+
+              this.killFudderTimeout = null;
+              console.log('Second timeout ended'); // Log when the second timeout ends
+            }, 1500);
+            this.changeSpeed(1000, 0.15);
+            new Onomat('chain');
+            window.dispatchEvent(
+              new CustomEvent('awardPoints', {
+                detail: {
+                  points: 100,
+                },
+              }),
+            );
+            this.soundManager.play('chainkill', true);
+        }
+    
+        if (this.deadFudders.length === this.fudders.length) {
+          console.log('advancing level: dead fudders', this.deadFudders.length, '= fudders', this.fudders.length)
+          this.deadFudders = []; // reset the dead fudders list
+          this.advanceLevel();
+          return;
+        }
+    } else {
+      console.log('collateral')
+        // Collateral in progress, increment count
+        this.noCollateral = false;
+        this.collateralCount++;
+        // Finalize as a collateral kill if no further kills
+        this.finalizeCollateral(this.collateralCount);
+
+        if (this.deadFudders.length === this.fudders.length) {
+          console.log('advancing level: dead fudders', this.deadFudders.length, '= fudders', this.fudders.length)
+          this.deadFudders = []; // reset the dead fudders list
+          this.advanceLevel();
+          return;
+        }
     }
+  }
+
+  finalizeChain(count) {
+    if (!this.gameStarted) {
+      window.removeEventListener('speedBoost', this.speedBoostHandler);
+      window.removeEventListener('useAbility', this.useAbilityHandler);
+      this.resetSpeed();
+      return;
+    }
+    console.log('You chained', count, 'fudders!')
+    let finalizingChainTimer;
+
+    switch (count) {
+      case 1:
+        
+        break;
+      case 2:
+        break;
+      case 3:
+        break;
+      case 4:
+        break;
+      default:
+        console.log('Cheating or some shit idk');
+        break;
+    }
+
+    this.chainCount = 0;
+
+    window.removeEventListener('speedBoost', this.speedBoostHandler);
+    window.removeEventListener('useAbility', this.useAbilityHandler);
+  }
+
+  finalizeCollateral(collateralCount) {
+    // Logic to handle the collateral, based on collateralCount
+    console.log(`Collateral of ${collateralCount} Fudders!`);
+    setTimeout(() => {
+      new Onomat('collat')
+      let points = 100 * collateralCount;
+      window.dispatchEvent(
+        new CustomEvent('awardPoints', {
+          detail: {
+            points: points,
+          },
+        }),
+      );
+      this.soundManager.play('collateral', true)
+      this.changeSpeed(1000, 0.15)
+      setTimeout(() => {
+        // Reset collateral count
+        this.collateralCount = 0;
+      }, 350);
+    }, 50)
+    // Additional logic to handle rewards or effects based on collateralCount
+    // ...
+  }
+
+  changeSpeed(duration, speedPercent) {
+    if (!this.changingSpeed) {
+      this.changingSpeed = true;
+      setTimeout(() => {
+        this.changingSpeed = false;
+      }, duration);
+    } else {
+      return;
+    }
+    window.removeEventListener('speedBoost', this.speedBoostHandler);
+    window.removeEventListener('useAbility', this.useAbilityHandler);
+
+    // create event listener for 'speedBoost' and 'useAbility' window events
+    // if either of these events are emitted, change speed back to normal
+    this.speedBoostHandler = () => {
+      clearTimeout(this.killFudderTimeout);
+      this.resetSpeed();
+      this.killFudderTimeout = setTimeout(() => {
+        console.log('Timeout started');
+        this.finalizeChain(this.chainCount);
+
+        this.killFudderTimeout = null;
+        console.log('Second timeout ended'); // Log when the second timeout ends
+      }, 2500);
+      window.removeEventListener('speedBoost', this.speedBoostHandler);
+      window.removeEventListener('useAbility', this.useAbilityHandler);
+    };
+
+    this.useAbilityHandler = () => {
+      if (this.abilities.length === 0) return;
+      clearTimeout(this.killFudderTimeout);
+      this.resetSpeed();
+      this.killFudderTimeout = setTimeout(() => {
+        console.log('Timeout started');
+        this.finalizeChain(this.chainCount);
+
+        this.killFudderTimeout = null;
+        console.log('Second timeout ended'); // Log when the second timeout ends
+      }, 2500);
+      window.removeEventListener('speedBoost', this.speedBoostHandler);
+      window.removeEventListener('useAbility', this.useAbilityHandler);
+    };
+
+    window.addEventListener('speedBoost', this.speedBoostHandler);
+    window.addEventListener('useAbility', this.useAbilityHandler);
+
+    setTimeout(() => {
+      if (this.speedBoostHandler) {
+        window.removeEventListener('speedBoost', this.speedBoostHandler);
+      }
+
+      if (this.useAbilityHandler) {
+        window.removeEventListener('useAbility', this.useAbilityHandler);
+      }
+    }, duration)
+
+    this.gameEngine.changeSpeed(duration, speedPercent)
+    this.luncman.setSpeedFactor(duration, speedPercent)
+    this.fudders.forEach((fudder) => {
+      if (!fudder.dead) {
+        fudder.setSpeedFactor(duration, speedPercent)
+      }
+    })
+  }
+
+  resetSpeed() {
+    if (this.gameEngine) this.gameEngine.resetSpeed();
+    if (this.luncman) this.luncman.resetSpeedFactor();
+    if (this.fudders) {
+        this.fudders.forEach((fudder) => {
+        if (!fudder.dead) {
+          fudder.resetSpeedFactor();
+        }
+      });
+    }
+  }
+
+  startRecordingLuncmanHistory() {
+    this.positionHistoryEnabled = true;
+    // Clear previous history
+    this.luncmanPositionHistory = [];
+  }
+
+  stopRecordingLuncmanHistory() {
+    this.positionHistoryEnabled = false;
+  }
+
+  updateLuncmanPositionHistory() {
+    if (!this.positionHistoryEnabled || !this.luncman.animationTarget.style.left || !this.luncman.animationTarget.style.top) return;
+
+    // Fetch Luncman's element by ID and get its current position
+    const currentPosition = {
+        x: parseFloat(this.luncman.animationTarget.style.left), // Correct X coordinate
+        y: parseFloat(this.luncman.animationTarget.style.top), // Correct Y coordinate
+        timestamp: Date.now()
+    };
+    this.luncmanPositionHistory.push(currentPosition);
+
+    // Ensure the history doesn't grow indefinitely
+    if (this.luncmanPositionHistory.length > this.historySizeLimit) {
+        this.luncmanPositionHistory.shift(); // Remove oldest records
+    }
+  }
+
+  getLuncmanPositionFromHistory(msAgo) {
+    const targetTime = Date.now() - msAgo;
+    // Return the closest position by time
+    return this.luncmanPositionHistory.reduce((prev, curr) => 
+      Math.abs(curr.timestamp - targetTime) < Math.abs(prev.timestamp - targetTime) ? curr : prev, 
+      this.luncmanPositionHistory[0] || null
+    );
+  }
+
+  update() {
+    this.updateLuncmanPositionHistory();
   }
 
   /**
@@ -3768,44 +4791,65 @@ class GameCoordinator {
    * @param {({ detail: { points: Number }})} e - Contains a quantity of points to add
    */
   awardPoints(e) {
-
     this.points += e.detail.points;
     this.pointsDisplay.innerText = this.points;
     if (this.points > (this.highScore || 0)) {
-      this.highScore = this.points;
-      this.highScoreDisplay.innerText = this.points;
+        this.highScore = this.points;
+        this.highScoreDisplay.innerText = this.points;
     }
- 
-    if (this.points >= 10000 && !this.extraLifeGiven) {
-      this.extraLifeGiven = true;
-      this.soundManager.play('extra_life');
-      this.lives += 1;
-      this.updateExtraLivesDisplay();
+
+    if (this.points >= 1500 && !this.extraLifeGiven) {
+        new Onomat('newLife');
+        this.extraLifeGiven = true;
+        this.soundManager.play('extra_life');
+        this.lives += 1;
+        this.updateExtraLivesDisplay();
     }
 
     if (e.detail.type === 'fruit') {
-      this.fruitAvailable = false;
-      this.fruitEaten += 1;
-      const fruitPosition = this.levelData.fruitPosition;
-      const left = this.scaledTileSize * fruitPosition.x;
-      const top = this.scaledTileSize * fruitPosition.y;
-      const width = e.detail.points >= 1000
-        ? this.scaledTileSize * 3
-        : this.scaledTileSize * 2;
-      const height = this.scaledTileSize * 2;
+        this.fruitAvailable = false;
+        this.fruitEaten += 1;
+        const fruitPosition = this.levelData.fruitPosition;
+        const left = this.scaledTileSize * fruitPosition.x;
+        const top = this.scaledTileSize * fruitPosition.y;
+        const width = e.detail.points >= 1000 ? this.scaledTileSize * 3 : this.scaledTileSize * 2;
+        const height = this.scaledTileSize;
 
-      let fruitType = e.detail.fruitType;
-      if (fruitType && this.gameState.playerStats.fruitCollected.hasOwnProperty(fruitType)) {
-        this.gameState.playerStats.fruitCollected[fruitType] += 1;
-      }
-  
-      this.displayText({ left, top }, e.detail.points, 2000, width, height);
-      this.soundManager.play('fruit');
-      this.updateFruitDisplay(
-        this.fruit.determineImage('fruit', e.detail.points),
-      );
+        let fruitType = e.detail.fruitType;
+        if (fruitType && this.gameState.playerStats.fruitCollected.hasOwnProperty(fruitType)) {
+            this.gameState.playerStats.fruitCollected[fruitType] += 1;
+        }
+
+        // this.displayText({ left, top }, e.detail.points, 2000, width, height);
+        this.soundManager.play('fruit');
+        this.updateFruitDisplay(
+            this.fruit.determineImage('fruit', e.detail.points),
+        );
+
+        // Determine the image index for the $coin based on fruitType
+        const coinImageIndex = this.determineCoinImageIndex(fruitType);
+
+        // Create a new Onomat instance with the $coin type and determined image index
+        new Onomat('$coin', coinImageIndex);
     }
   }
+
+  /**
+   * Determines the image index for $coin based on fruit type.
+   * @param {string} fruitType - The type of the fruit.
+   * @returns {number} The image index for the $coin.
+   */
+  determineCoinImageIndex(fruitType) {
+      const fruitTypes = {
+          'bitcoin': 0,
+          'atom': 2,
+          'eth': 4,
+          'solana': 6
+      };
+      console.log('determined coin image index for', fruitType, 'to be', fruitTypes[fruitType] || 0);
+      return fruitTypes[fruitType] || 0; // Default to 0 if fruitType is not found
+  }
+
 
   /**
    * Animates Luncman's death, subtracts a life, and resets character positions if
@@ -3813,7 +4857,6 @@ class GameCoordinator {
    */
   deathSequence() {
     this.gameStarted = false;
-    this.allowPause = false;
     this.cutscene = true;
     this.dead = true;
     this.soundManager.setCutscene(this.cutscene);
@@ -3823,7 +4866,15 @@ class GameCoordinator {
     this.removeTimer({ detail: { timer: this.endIdleTimer } });
     this.removeTimer({ detail: { timer: this.fudderFlashTimer } });
 
+    this.stopRecordingLuncmanHistory();
+    this.startedRecordingPosition = false; // Prevent multiple recordings
+
     this.gameState.playerStats.deaths += 1;
+
+    if (this.attackOnomat) {
+      this.attackOnomat.removeOnomat();
+      this.attackOnomat = null;
+    }
   
     this.allowKeyPresses = false;
     this.luncman.moving = false;
@@ -3870,7 +4921,7 @@ class GameCoordinator {
               ability.removeAbility();
             });
             // Reset the abilities array.
-            this.abilities = [];
+            this.resetAbilities();
   
             this.startGameplay();
           }, 500);
@@ -3910,18 +4961,10 @@ class GameCoordinator {
 
   updatePlayerStats() {
     const endTime = Date.now();
-    let address;
-    
-    if (window.connectedWallet) {
-      address = window.connectedWallet.addresses['pisco-1']
-      this.gameState.playerStats.address = address;
-    } else {
-      address = this.username;
-    }
 
     this.gameState.playerStats = {
-      username: this.username,
-      address: this.gameState.playerStats.address,
+      username: window.client.gloInfo.username,
+      address: window.client.gloInfo.walletID,
       highestLevel: this.level,
       endTime: endTime,
       score: this.points,
@@ -3942,60 +4985,64 @@ class GameCoordinator {
   /**
    * Displays GAME OVER text and displays the menu so players can play again
    */
-  gameOver() {
+  gameOver(victory) {
     this.soundManager.stopMusic();
+    window.glogo.disabled = false;
 
-    new Timer(() => {
-      this.displayText(
-        {
-          left: this.scaledTileSize * 9,
-          top: this.scaledTileSize * 16.5,
-        },
-        'game_over',
-        4000,
-        this.scaledTileSize * 10,
-        this.scaledTileSize * 2,
-      );
-      this.fruit.hideFruit();
-      
-      // Remove all abilities.
-      this.abilities.forEach((ability) => {
-      ability.removeAbility();
-      });
-      // Reset the abilities array.
-      this.abilities = [];
-
+    if (victory) {
       this.updatePlayerStats();
 
+      this.playOutro();
+      // const winningScreen = new WinningScreen(this.points);
+    } else {
       new Timer(() => {
-        this.leftCover.style.left = '0';
-        this.rightCover.style.right = '0';
-        this.leftCover.style.visibility = 'visible';
-        this.rightCover.style.visibility = 'visible';
-        this.leftCover.style.zIndex = 5;
-        this.rightCover.style.zIndex = 5;
-
-        const rHud = document.getElementById('right-HUD');
-        const bottomRow = document.getElementById('bottom-row');
-        rHud.style.display = 'none';
-        bottomRow.style.display = 'none';
-
-        // playPlayMainVideo();
-
-        setTimeout(() => {
-          const winningScreen = new WinningScreen(this.points);
-          // this.resetAttackCooldownDivs();
-          // this.attackCooldown = null;
-        }, 1000);
-      }, 2500);
-    }, 2250);
+        this.displayText(
+          {
+            left: this.scaledTileSize * 9,
+            top: this.scaledTileSize * 16.5,
+          },
+          'game_over',
+          4000,
+          this.scaledTileSize * 10,
+          this.scaledTileSize,
+        );
+        this.soundManager.play('gameover');
+        this.fruit.hideFruit();
+        
+        // Remove all abilities.
+        this.abilities.forEach((ability) => {
+        ability.removeAbility();
+        });
+        // Reset the abilities array.
+        this.resetAbilities();
+  
+        this.updatePlayerStats();
+  
+        new Timer(() => {
+          this.leftCover.style.left = '0';
+          this.rightCover.style.right = '0';
+          this.leftCover.style.visibility = 'visible';
+          this.rightCover.style.visibility = 'visible';
+          this.leftCover.style.zIndex = 5;
+          this.rightCover.style.zIndex = 5;
+  
+          const rHud = document.getElementById('right-HUD');
+          const bottomRow = document.getElementById('bottom-row');
+          rHud.style.display = 'none';
+          bottomRow.style.display = 'none';
+  
+          setTimeout(() => {
+            new WinningScreen(this.points);
+          }, 1000);
+        }, 2500);
+      }, 2250);
+    }
   }
 
   /**
    * Handle events related to the number of remaining dots
    */
   dotEaten() {
-    console.log('dot eaten')
     this.remainingDots -= 1;
     this.dotsEaten += 1;
     this.gameState.playerStats.coinsCollected += 1;
@@ -4014,7 +5061,7 @@ class GameCoordinator {
     }
   
     // Reduce the remaining timer duration for attack cooldown
-    if (this.attackCooldown) {
+    if (this.abilities) {
       // Find the highest indexed ability that is not complete.
       const highestIndexNotComplete = this.abilities.reduce((maxIndex, ability, index) => {
         if (!ability.complete && index > maxIndex) {
@@ -4053,40 +5100,38 @@ class GameCoordinator {
     }
   }
 
-  /**
-   * Determines the correct siren ambience
-   * @param {Number} remainingDots
-   * @returns {String}
-   */
-  determineSiren(remainingDots) {
-    let sirenNum;
+  // /**
+  //  * Determines the correct siren ambience
+  //  * @param {Number} remainingDots
+  //  * @returns {String}
+  //  */
+  // determineSiren(remainingDots) {
+  //   let sirenNum;
 
-    if (remainingDots > 40) {
-      sirenNum = 1;
-    } else if (remainingDots > 20) {
-      sirenNum = 2;
-    } else {
-      sirenNum = 3;
-    }
+  //   if (remainingDots > 40) {
+  //     sirenNum = 1;
+  //   } else if (remainingDots > 20) {
+  //     sirenNum = 2;
+  //   } else {
+  //     sirenNum = 3;
+  //   }
 
-    return `siren_${sirenNum}`;
-  }
+  //   return `siren_${sirenNum}`;
+  // }
 
   /**
    * Handles cutscene logic
    */
-  async setCutscene(levelData) {
+  async setCutscene(levelData, cutscene) {
     let vh = window.innerHeight * 0.01;
     document.documentElement.style.setProperty('--vh', `${vh}px`);
     this.levelData = levelData;
-    console.log('setting cutscene');
+    this.originalCutscenes = [...levelData.loadedCutscenes];
+    console.log('setting cutscene', levelData);
     if (this.isMobile) {
-      this.cutscenes = Object.values(levelData.assets.mobileCutscenes);
+      this.cutscenes = levelData.loadedCutscenes.filter(img => img.src.includes('mobile_cutscenes'));
     } else {
-      this.cutscenes = Object.values(levelData.assets.cutscenes);
-
-      const retroCover = document.getElementById('retro-cover');
-      retroCover.style.backgroundImage = 'url("/style/scss/retro_cover_ingame.webp")';
+      this.cutscenes = levelData.loadedCutscenes.filter(img => img.src.includes('cutscenes'));
     }
     this.cutsceneTexts = Object.keys(levelData.assets.cutscenes);
     console.log('cutscenes:', this.cutscenes);
@@ -4132,39 +5177,35 @@ class GameCoordinator {
     this.cutsceneDiv.style.backgroundSize = 'cover';
     this.cutsceneDiv.style.backgroundPosition = 'center';
     this.cutsceneDiv.style.transform = cutsceneTransform;
-    this.cutsceneDiv.style.zIndex = '50';
-    document.body.appendChild(this.cutsceneDiv);
+    this.cutsceneDiv.style.zIndex = '2';
+    this.contentContainer.appendChild(this.cutsceneDiv);
   
     this.cutsceneContainer = document.createElement('div');
     this.cutsceneContainer.style.display = 'flex';
     this.cutsceneContainer.style.flexDirection = 'column';
+    this.cutsceneContainer.style.justifyContent = 'center';
     this.cutsceneContainer.style.alignItems = 'center';
     this.cutsceneDiv.appendChild(this.cutsceneContainer);
   
     this.cutsceneImg = document.createElement('img');
-    if (this.isMobile) {
-      this.cutsceneImg.style.width = '70vw';
-      this.cutsceneImg.style.marginTop = '3vh';
-    } else {
-      this.cutsceneImg.style.width = '60vw';
-      this.cutsceneImg.style.height = '60vh';
-      this.cutsceneImg.style.marginTop = '5vh';
-    }
-    this.cutsceneImg.style.objectFit = 'contain';
     this.cutsceneContainer.appendChild(this.cutsceneImg);
   
     this.cutsceneText = document.createElement('div');
+    this.cutsceneText.id = 'cutSceneText';
     this.cutsceneText.style.display = 'flex';
+    this.cutsceneText.style.opacity = '0';
+    this.cutsceneText.style.flexDirection = 'column';
     this.cutsceneText.style.alignItems = 'center';
     this.cutsceneText.style.justifyContent = 'center';
     this.cutsceneText.style.color = 'black';
     this.cutsceneText.style.textAlign = 'center';
+    this.cutsceneText.style.zIndex = '1';
     if (this.isMobile) {
       this.cutsceneText.style.width = '70vw';
       this.cutsceneText.style.fontSize = '1.5em';
     } else {
       this.cutsceneText.style.width = '40vw';
-      this.cutsceneText.style.fontSize = '2em';
+      this.cutsceneText.style.fontSize = '1vw';
     }
     this.cutsceneText.style.lineHeight = '1.5em';
     this.cutsceneText.style.height = '20vh';
@@ -4176,30 +5217,135 @@ class GameCoordinator {
     this.cutsceneText.style.borderRadius = '10px';
     this.cutsceneText.style.padding = '1em';
     this.cutsceneContainer.appendChild(this.cutsceneText);
+
+    //new ish
+    this.cutsceneTextLabel = document.createElement('span');
+    this.cutsceneTextLabel.id = 'cutSceneTextLabel';
+    this.cutsceneTextLabel.innerText = '-- PRESS SPACE TO SKIP --';
+    this.cutsceneTextLabel.style.fontSize = '0.75em';
+    this.cutsceneTextLabel.style.color = 'white';
+    this.cutsceneTextLabel.style.top = '97.5%';
+    this.cutsceneTextLabel.style.zIndex = '1';
+    this.cutsceneTextLabel.style.opacity = '0.6';
+    this.cutsceneTextLabel.style.position = 'absolute';
+    this.cutsceneTextLabel.style.display = 'none';
+    this.cutsceneContainer.appendChild(this.cutsceneTextLabel);
+
+    let flashInterval = setInterval(() => {
+      if (this.cutsceneHinted) {
+        clearInterval(flashInterval);
+        this.cutsceneTextLabel.style.display = 'none';
+      } else {
+        this.cutsceneTextLabel.style.display = this.cutsceneTextLabel.style.display === 'none' ? '' : 'none';
+      }
+    }, 650);
   
     this.currentCutsceneIndex = 0;
   
-    this.playCutscene(levelData);
+    if (cutscene) {
+      this.playCutscene(levelData);
+    } else {
+      this.openCurtain(levelData);
+    }
+    
+    // hide main menu
+    this.leftCover.style.visibility = 'hidden';
+    this.rightCover.style.visibility = 'hidden';
+    this.luncmanDiv.style.visibility = 'hidden';
+    this.mainMenu.style.opacity = 0;
+  }
+
+  openCurtain(levelData) {
+    // Check if the curtain image is loaded
+    const curtainImage = this.curtainVideo[0];
+    console.log('setting curtain', this.curtainVideo)
+    if (!curtainImage) {
+      console.error('Curtain image not loaded');
+      return;
+    }
+
+    this.cutsceneImg.style.display = 'none';
+
+    // Append the video to the cutsceneDiv
+    this.cutsceneDiv.appendChild(this.introVideo);
+
+    // The videos should not loop
+    this.introVideo.loop = false;
+    this.introVideo.style.height = '70%';
+    this.introVideo.style.position = 'absolute';
+    this.introVideo.style.display = 'flex';
+
+    console.log('playing curtain video');
+
+    // Create a SpriteSheet for the curtain
+    const curtainSprite = new SpriteSheet({
+      src: curtainImage.src,
+      parent: this.cutsceneDiv,
+      frameWidth: 384, // replace with the width of a single frame
+      frameHeight: 216, // replace with the height of a single frame
+      frameCount: 15, // replace with the number of frames
+      framesPerRow: 15, // replace with the number of frames per row
+      fps: 10, // replace with the desired FPS
+      loop: false, // replace with whether the animation should loop
+      onFinished: this.playIntro.bind(this, levelData), // call playIntro when the animation finishes
+      reverse: true // play the animation in reverse
+    });
+    curtainSprite.canvas.id = 'curtain-video';
+    curtainSprite.canvas.style.position = 'absolute';
+    curtainSprite.canvas.style.width = '100%';
+    curtainSprite.canvas.style.height = '100%';
+    this.cutsceneDiv.appendChild(curtainSprite.canvas);
+  
+    // Start the curtain animation
+    curtainSprite.start();
+  }
+
+  playIntro(levelData) {
+    if (levelData.level !== 1) {
+      this.playCutscene(levelData);
+      return;
+    }
+    // Check if the intro video is loaded
+    if (!this.introVideo) {
+      console.error('Intro video not loaded');
+      return;
+    }
+    this.playingCutscene = true;
+
+    console.log('playing intro');
+
+    // Play the video
+    this.introVideo.play();
+
+    // When the video ends, remove it and call playCutscene
+    this.introVideo.addEventListener('ended', () => {
+      this.introVideo.remove();
+      this.playCutscene(levelData);
+    });
   }
 
   playCutscene(levelData) {
     console.log('playing cutscenes from:', levelData);
-    if (this.currentCutsceneIndex < this.cutscenes.length) {
+    this.introVideo.style.display = 'none';
+    if (levelData.loadedCutscenes && levelData.loadedCutscenes.length > 0) {
+      this.cutsceneText.style.opacity = '1';
       this.playingCutscene = true;
-      console.log('playing cutscene:', this.cutscenes[this.currentCutsceneIndex]);
+      const cutsceneImg = levelData.loadedCutscenes.shift(); // Get and remove the first cutscene
+      this.cutsceneImg.replaceWith(cutsceneImg); // Replace the old img element with the preloaded one
+      this.cutsceneImg = cutsceneImg; // Update the reference to the new img element
+      this.cutsceneImg.style.height = '60%';
+      this.cutsceneImg.style.position = 'relative';
+      this.cutsceneImg.style.top = '5%';
+      this.cutsceneImg.style.objectFit = 'contain';
       
-      if (this.isMobile) {
-        this.cutsceneImg.src = `/levels/level_${levelData.level}/mobile_cutscenes/${this.cutscenes[this.currentCutsceneIndex]}.webp`;
-      } else {
-        this.cutsceneImg.src = `/levels/level_${levelData.level}/cutscenes/${this.cutscenes[this.currentCutsceneIndex]}.webp`;
-      }
-      console.log('cutsceneText:', levelData.assets.cutsceneText[this.cutscenes[this.currentCutsceneIndex]]);
-      this.cutsceneText.innerHTML = levelData.assets.cutsceneText[this.cutsceneTexts[this.currentCutsceneIndex]];
-  
-      this.currentCutsceneIndex++;
+      const cutsceneTextKey = cutsceneImg.src.split('/').pop().split('.')[0]; // Extract the cutscene key from the filename
+      console.log('cutsceneTextKey:', cutsceneTextKey);
+      console.log('cutsceneText:', levelData.assets.cutsceneText[cutsceneTextKey]);
+      this.cutsceneText.innerHTML = levelData.assets.cutsceneText[cutsceneTextKey];
     } else {
       this.playingCutscene = false;
       this.cutsceneDiv.remove();
+      this.levelData.loadedCutscenes = [...this.originalCutscenes];
       if (!this.advancingLevel) {
         console.log('New game so calling startButtonClick');
         this.startButtonClick();
@@ -4213,14 +5359,62 @@ class GameCoordinator {
   skipCutscene() {
     if (this.playingCutscene) {
       console.log('skipping cutscene');
-      this.playCutscene(this.levelData);
+      setTimeout(() => {
+        this.playCutscene(this.levelData);
+      }, 25);
     }
+  }
+
+  playOutro() {
+    if (!this.outroVideo) {
+      console.log('Outro video not loaded');
+      return;
+    }
+
+    // Create a new div element
+    const blackBackground = document.createElement('div');
+    this.contentContainer.appendChild(blackBackground);
+
+    // Set the div to take up the full width and height of the screen and have a black background
+    blackBackground.style.width = '100%';
+    blackBackground.style.height = '100%';
+    blackBackground.style.backgroundColor = 'black';
+    blackBackground.style.position = 'absolute';
+    blackBackground.style.zIndex = '2';
+
+    // Append the div to the body of the document
+
+    // Set the video to take up the full height of the screen and allow overlap on the sides
+    this.contentContainer.appendChild(this.outroVideo)
+    this.outroVideo.style.height = '100%';
+    this.outroVideo.style.width = '100%';
+    this.outroVideo.style.zIndex = '2';
+    this.outroVideo.style.position = 'absolute';
+
+    // Set the video to start playing immediately
+    this.outroVideo.autoplay = true;
+
+    // After 2 seconds, remove the video and the black background from the document and create a new WinningScreen
+    setTimeout(() => {
+      this.outroVideo.remove();
+      blackBackground.remove();
+      window.winningScreen = new WinningScreen(this.points);
+    }, 2000); // 2000 milliseconds = 2 seconds
+  }
+
+  async loadOutro() {
+    const outroVideoUrl = 'levels/level_4/cutscenes/5s1.webp';
+    this.outroVideo = (await this.createGameElements([outroVideoUrl], 'img'))[0];
   }
 
   /**
    * Load the next level
    */
   async loadLevel(levelNumber) {
+    if (levelNumber === 0) {
+      this.loadOutro();
+      return;
+    }
     if (this.loadedLevels[levelNumber]) {
       console.log('level', levelNumber, 'already loaded');
       return this.loadedLevels[levelNumber];
@@ -4239,18 +5433,31 @@ class GameCoordinator {
           assetSources.push(`${imgBase}${levelData.assets.fudders[fudderKey]}.webp`);
         }
 
+        const loadedImages = await this.createGameElements(assetSources, 'img');
+
+        // Store the loaded images in level.assets
+        levelData.assets.loadedImages = loadedImages;
+
         console.log('all cutscenes:', levelData.assets.cutscenes);
+        const cutsceneSources = [];
 
         for (const cutsceneKey in levelData.assets.cutscenes) {
           if (this.isMobile) {
-            assetSources.push(`${imgBase}mobile_cutscenes/${levelData.assets.mobileCutscenes[cutsceneKey]}.webp`);
+            cutsceneSources.push(`${imgBase}mobile_cutscenes/${levelData.assets.mobileCutscenes[cutsceneKey]}.webp`);
           } else {
-            assetSources.push(`${imgBase}cutscenes/${levelData.assets.cutscenes[cutsceneKey]}.webp`);
+            cutsceneSources.push(`${imgBase}cutscenes/${levelData.assets.cutscenes[cutsceneKey]}.webp`);
           }
           console.log('loading cutscene:', levelData.assets.cutscenes[cutsceneKey]);
         }
 
-        await this.createGameElements(assetSources, 'img');
+        const loadedCutscenesArray = await this.createGameElements(cutsceneSources, 'img');
+
+        // Sort the loaded cutscenes based on the order number in the src attribute
+        const loadedCutscenes = loadedCutscenesArray.sort((a, b) => {
+          const aOrder = a.src.charAt(a.src.length - 6); // Get the character before '.webp'
+          const bOrder = b.src.charAt(b.src.length - 6); // Get the character before '.webp'
+          return aOrder - bOrder;
+        });
 
         const level = {
           level: levelData.level,
@@ -4262,7 +5469,8 @@ class GameCoordinator {
           fudderDefaultPosition: levelData.fudderDefaultPosition,
           tunnels: levelData.tunnels,
           backgroundColor: levelData.backgroundColor,
-          assets: levelData.assets
+          assets: levelData.assets,
+          loadedCutscenes: loadedCutscenes
         };
   
         this.loadedLevels[levelNumber] = level;
@@ -4298,8 +5506,10 @@ class GameCoordinator {
       this.backgroundImageElement.style.width = '100%';
       this.backgroundImageElement.style.height = '100%';
       this.backgroundImageElement.style.backgroundImage = `url('/style/graphics/BGS/bg${this.levelData.level}.webp')`;
-      this.backgroundImageElement.style.backgroundSize = 'cover';
+      this.backgroundImageElement.style.backgroundSize = '155%';
       this.backgroundImageElement.style.backgroundPosition = 'center';
+      this.backgroundImageElement.style.position = 'absolute';
+      this.backgroundImageElement.style.zIndex = '0';
       this.backgroundImageElement.id = 'overflow-image';
 
       // Append the backgroundImageElement to overflowMask
@@ -4315,7 +5525,7 @@ class GameCoordinator {
     // Set the right HUD with the level data
     this.setRightHud();
 
-    this.level = levelData.level;
+    this.level = this.levelData.level;
 
     if (this.level === 1) {
       this.firstLevelData = levelData;
@@ -4376,7 +5586,6 @@ class GameCoordinator {
    */
   advanceLevel() {
     this.advancingLevel = true;
-    this.allowPause = false;
     this.cutscene = true;
     this.soundManager.setCutscene(this.cutscene);
     this.allowKeyPresses = false;
@@ -4396,6 +5605,9 @@ class GameCoordinator {
     this.abilities.forEach((ability) => {
       ability.togglePause();
     });
+
+    this.attackOnomat.removeOnomat();
+    this.attackOnomat = null;
 
     this.removeTimer({ detail: { timer: this.fruitTimer } });
     this.removeTimer({ detail: { timer: this.fudderCycleTimer } });
@@ -4437,18 +5649,23 @@ class GameCoordinator {
                       ability.removeAbility();
                     });
                     // Reset the abilities array.
-                    this.abilities = [];
+                    this.resetAbilities();
+                    //handle beating all levels
+                    if (this.nextLevel === 0) {
+                      this.gameOver(true);
+                      return
+                    }
 
                     const nextLevelData = this.loadedLevels[this.nextLevel];
                     if (nextLevelData) {
                       this.levelData = nextLevelData;
                       console.log('setting level to:', nextLevelData)
-                      this.setCutscene(nextLevelData);
+                      this.setCutscene(nextLevelData, true);
                     } else {
                       this.loadLevel(this.nextLevel).then(levelData => {
                         this.levelData = levelData;
                         console.log('loaded level and now setting to:', levelData)
-                        this.setCutscene(levelData)
+                        this.setCutscene(levelData, true)
                       });
                     }
                   }, 500);
@@ -4463,6 +5680,7 @@ class GameCoordinator {
 
   setNextLevel(nextLevelData) {
     console.log('next level: ', this.nextLevel);
+    this.checkForUsername();
 
     // this.resetAttackCooldownDivs();
     this.luncman.scared = false;
@@ -4527,19 +5745,21 @@ class GameCoordinator {
    */
   powerUp() {
 
-    // this.advanceLevel();
-
     this.luncman.setScaredSpriteSheet();
     console.log('setscaredspritesheet');
+    
+    new Onomat('gloUp')
 
     if (this.remainingDots !== 0) {
-      this.soundManager.setAmbience('power_up');
+      // this.soundManager.setAmbience('power_up');
+         this.soundManager.play('luna');
     }
 
     this.removeTimer({ detail: { timer: this.fudderFlashTimer } });
 
     this.fudderCombo = 0;
     this.scaredFudders = [];
+    this.gloPilled = true;
 
     this.fudders.forEach((fudder) => {
       if (fudder.mode !== 'eyes') {
@@ -4554,14 +5774,33 @@ class GameCoordinator {
     const powerDuration = Math.max((7 - this.level) * 1000, 0);
     this.fudderFlashTimer = new Timer(() => {
       this.flashFudders(0, 9);
-    }, powerDuration); 
+      this.gloPilled = false;
+    }, 6000); 
   }
 
   /**
    * Determines the quantity of points to give based on the current combo
    */
   determineComboPoints() {
-    return 100 * (2 ** this.fudderCombo);
+    let comboPoints;
+    switch (this.fudderCombo) {
+      case 1:
+        comboPoints = 5;
+        break;
+      case 2:
+        comboPoints = 25;
+        break;
+      case 3:
+        comboPoints = 50;
+      break;
+      case 4:
+        comboPoints = 200;
+        break;
+        default:
+        comboPoints = 5;
+        break;
+    }
+    return comboPoints;
   }
 
   /**
@@ -4572,10 +5811,13 @@ class GameCoordinator {
     const pauseDuration = 1000;
     const { position, measurement } = e.detail.fudder;
 
+    new Onomat('eat');
+    e.detail.fudder.reduceHealth(10);
+
     this.pauseTimer({ detail: { timer: this.fudderFlashTimer } });
     this.pauseTimer({ detail: { timer: this.fudderCycleTimer } });
     this.pauseTimer({ detail: { timer: this.fruitTimer } });
-    this.soundManager.play('eat_fudder');
+    this.soundManager.play('luncpill');
 
     this.scaredFudders = this.scaredFudders.filter(
       fudder => fudder.name !== e.detail.fudder.name,
@@ -4591,7 +5833,8 @@ class GameCoordinator {
         },
       }),
     );
-    this.displayText(position, comboPoints, pauseDuration, measurement);
+    // this.displayText(position, comboPoints, pauseDuration, measurement);
+    new Onomat('+25');
 
     this.allowLuncmanMovement = false;
     this.luncman.display = false;
@@ -4606,7 +5849,7 @@ class GameCoordinator {
     });
 
     new Timer(() => {
-      this.soundManager.setAmbience('eyes');
+      // this.soundManager.setAmbience('eyes');
 
       this.resumeTimer({ detail: { timer: this.fudderFlashTimer } });
       this.resumeTimer({ detail: { timer: this.fudderCycleTimer } });
@@ -4635,8 +5878,49 @@ class GameCoordinator {
       const sound = this.scaredFudders.length > 0
         ? 'power_up'
         : null;
-      this.soundManager.setAmbience(sound);
+      // this.soundManager.setAmbience(sound);
     }
+  }
+
+  playTutorial() {
+    const tutDiv = document.createElement('div');
+    tutDiv.style.position = 'absolute';
+    tutDiv.style.top = `${this.scaledTileSize * 23.5}px`;
+    tutDiv.style.transform = 'translate(-50%, -50%)';
+    tutDiv.style.left = '50%';
+    tutDiv.style.zIndex = 2;
+    this.mazeDiv.appendChild(tutDiv);
+
+    const tutorialImages = ['tut1.webp', 'tut2.webp', 'tut3.webp', 'tut4.webp', 'tut5.webp'];
+    let currentIndex = 0;
+
+    const displayImage = () => {
+      if (currentIndex >= tutorialImages.length) {
+        this.tutPlayed = true;
+        return;
+      }
+
+      const img = document.createElement('img');
+      img.src = `/style/graphics/tutorial/${tutorialImages[currentIndex]}`;
+      img.style.height = `${this.scaledTileSize * 1.5}px`;
+      img.style.width = 'auto';
+      img.style.opacity = '0';
+      tutDiv.appendChild(img);
+
+      gsap.fromTo(img, {opacity: 0}, {opacity: 1, duration: 0.5}); // fade in
+
+      setTimeout(() => {
+        gsap.fromTo(img, {opacity: 1}, {opacity: 0, duration: 0.5, // fade out
+          onComplete: () => {
+            tutDiv.removeChild(img);
+            currentIndex++;
+            setTimeout(displayImage, 1000); // delay before next image
+          }
+        });
+      }, 2500); // display time
+    };
+
+    displayImage();
   }
 
   /**
@@ -4655,7 +5939,7 @@ class GameCoordinator {
     pointsDiv.style.backgroundImage = 'url(/style/graphics/'
         + `spriteSheets/text/${amount}.webp`;
     pointsDiv.style.width = `${width}px`;
-    pointsDiv.style.height = `${height || width}px`;
+    pointsDiv.style.height = `${height}px`;
     pointsDiv.style.top = `${position.top}px`;
     pointsDiv.style.left = `${position.left}px`;
     pointsDiv.style.zIndex = 2;
@@ -4771,14 +6055,19 @@ class GameCoordinator {
   }
 }
 
-class WinningScreen {
+class WinningScreen { 
   constructor(finalscore) {
     this.playWinningScreen();
     this.simulateWin(finalscore);
   }
 
   simulateWin(finalscore) {
-    fetch('/simulateWin', {
+    // if (finalscore < 1000) {
+    //   this.showLoser();
+    //   return;
+    // }
+    if (!window.client.gloSession && !window.client.gloInfo.walletID.startsWith('terra')) return;
+    fetch('/fakeWin', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -4794,300 +6083,988 @@ class WinningScreen {
     })
     .then(data => {
         console.log('Success:', data);
-        const resultDiv = document.getElementById('resultDiv');
-        resultDiv.innerHTML = `You Won: ${data.result === 'win' ? 'Yes' : 'No'}<br>Percentile: ${data.percentile.toFixed(2)}%`;  // Updated this line to include the percentile
+        if (typeof sa_event === 'function') sa_event("won_glochip");
+        if (data.tokenId) {
+          this.glochipType = data.tokenId.split('_')[1] + ' glochip';
+        } else {
+          this.glochipType = null;
+        }
+        setTimeout(() => {
+            // resultDiv.innerHTML = `You Won: ${data.result === 'win' ? 'Yes' : 'No'}<br>Percentile: ${data.percentile.toFixed(2)}%`;
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const awaitText = document.getElementById('awaitText');
+            if (loadingSpinner) loadingSpinner.style.display = 'none';
+            if (awaitText) awaitText.style.display = 'none';
+            this.loadFinalResult(data.result, data.percentile);
+        }, 2000);  // Wait for 2 seconds before updating the result
     })
     .catch(error => {
         console.error('Error:', error);
     });
   }
 
-
-  playWinningScreen() {
-    // Create a div for the background
-    const backgroundDiv = document.createElement('div');
-    backgroundDiv.style.backgroundColor = 'black';
-    backgroundDiv.style.zIndex = '50';
-    document.body.appendChild(backgroundDiv);
-    // var audio = new Audio('style/audio/music/music2-.mp3');   
-    // audio.volume = 0.02;
-    // audio.play();
-
-    let vh = window.innerHeight * 0.01;
-    document.documentElement.style.setProperty('--vh', `${vh}px`);
-
-    if (this.isMobile) {
-      backgroundDiv.style.position = 'fixed';
-      backgroundDiv.style.top = 'calc(5.54 * var(--vh))';
-      backgroundDiv.style.left = '4.1vw';
-      backgroundDiv.style.width = '91.8vw';
-      backgroundDiv.style.height = window.winScreenHeight;
+  loadFinalResult(result, percentile) {
+    console.log('loading final result', percentile);
+    const resultImg = document.getElementById('resultImg');
+    if (resultImg) {
+      resultImg.style.height = '25%';
+      resultImg.style.position = 'absolute';
+      resultImg.style.left = '10%';
+      resultImg.style.top = '5%';
+      if (result === 'win'){
+        resultImg.src = '/style/graphics/yescheck.webp';
+      } else {
+        resultImg.src = '/style/graphics/nox.webp';
+      }
+    }
+    const resultBool = document.getElementById('resultBool');
+    if (resultBool) {
+      resultBool.style.color = 'white';
+      resultBool.style.position = 'absolute';
+      resultBool.style.right = '10%';
+      resultBool.style.top = '15%';
+      resultBool.style.fontSize = '150%';
+    }
+    if(result === 'win'){
+      if (resultBool) resultBool.innerText = 'YOU WON';
     } else {
-      backgroundDiv.style.position = 'fixed';
-      backgroundDiv.style.top = '0';
-      backgroundDiv.style.left = '0';
-      backgroundDiv.style.width = '100%';
-      backgroundDiv.style.height = '100%';
+      if (resultBool) resultBool.innerText = 'YOU LOST'
+    }
+    const resultPerformance = document.getElementById('resultPerformance');
+    if (resultPerformance) {
+      if (percentile === 100) {
+        resultPerformance.innerText = 'New Top Highscore!';
+        resultPerformance.style.color = 'gold';
+        resultPerformance.style.fontSize = '150%';
+        resultPerformance.style.fontWeight = 'bold';
+      } else {
+        resultPerformance.innerText = `${percentile.toFixed(2)}% Performance`;
+        resultPerformance.style.color = 'white';
+      }
+      resultPerformance.style.position = 'absolute';
+      resultPerformance.style.top = '42.5%';
+      resultPerformance.style.left = '50%';
+      resultPerformance.style.transform = 'translateX(-50%)';
+    }
+    if (result === 'win' && this.glochipType!=null) {
+      const resultClaim = document.getElementById('resultClaim');
+      if (resultClaim) {
+        resultClaim.style.display = 'flex';
+        resultClaim.style.position = 'relative';
+        resultClaim.style.top = '65%';
+        resultClaim.innerText = 'CLAIM';
+        resultClaim.addEventListener('click', this.loadResultSpinner.bind(this));
+      }
+    }
+  }
+
+  showLoser() {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    if (loadingSpinner) loadingSpinner.style.display = 'none';
+
+    const awaitText = document.getElementById('awaitText');
+    if (awaitText) awaitText.style.display = 'none';
+    
+    const resultImg = document.getElementById('resultImg');
+    if (resultImg) {
+      resultImg.style.height = '25%';
+      resultImg.style.position = 'absolute';
+      resultImg.style.left = '10%';
+      resultImg.style.top = '5%';
+      resultImg.src = '/style/graphics/nox.webp';
     }
 
+    const resultBool = document.getElementById('resultBool');
+    if (resultBool) {
+      resultBool.style.color = 'white';
+      resultBool.style.position = 'absolute';
+      resultBool.style.right = '10%';
+      resultBool.style.top = '15%';
+      resultBool.style.fontSize = '150%';
+      resultBool.innerText = 'YOU LOST';
+    }
+
+    const resultPerformance = document.getElementById('resultPerformance');
+    if (resultPerformance) {
+      resultPerformance.innerText = 'Score Too Low';
+      resultPerformance.style.color = 'white';
+      resultPerformance.style.position = 'absolute';
+      resultPerformance.style.top = '42.5%';
+      resultPerformance.style.left = '50%';
+      resultPerformance.style.transform = 'translateX(-50%)';
+    }
+  }
+
+  loadResultSpinner() {
+    console.log('loading result spinner')
+    document.getElementById('resultClaim').style.visibility = 'hidden';
+    const oldResult = document.getElementsByClassName('result-spinner-container')
+    if (oldResult.length > 0) {
+      oldResult.forEach((result) => {
+        result.remove();
+      });
+    }
+    const container = document.createElement('div');
+    container.className = 'result-spinner-container';
+    document.body.appendChild(container);
+    Object.assign(container.style, {
+      display: 'grid',
+      placeItems: 'center',
+      height: '35vh',
+      background: 'linear-gradient(to right, rgb(213 127 127), rgb(231 228 134), rgb(234 145 145))',
+      fontFamily: 'Helvetica, sans-serif',
+      position: 'absolute',
+      zIndex: '2',
+      left: '50%',
+      top: '30%',
+      transform: 'translateX(-50%)',
+      borderRadius: '20px',
+      border: '5px solid black',
+    });
   
-  // Create an image element for the webp
-  const webpImage = document.createElement('img');
-  webpImage.id = 'webpImage';
-  if (this.isMobile) {
-    webpImage.src = 'style/graphics/winning_screen_mobile.webp';
-  }
-  else {
-    webpImage.src = 'style/graphics/winning_screen.webp';
-  }
-  webpImage.style.position = 'absolute';
-  webpImage.style.width = '100%';
-  webpImage.style.height = '100%'; // Set the height to 100%
-  webpImage.style.top = '50%'; // Set the top to 50%
-  webpImage.style.left = '50%'; // Set the left to 50%
-  webpImage.style.transform = 'translate(-50%, -50%)';
-  backgroundDiv.appendChild(webpImage);
-
-  // Create a div for displaying the result
-  const resultDiv = document.createElement('div');
-  resultDiv.id = 'resultDiv';  // Set an id so we can find it later
-  resultDiv.style.position = 'absolute';
-  resultDiv.style.color = 'white';
-  resultDiv.style.fontSize = '200%';
-  resultDiv.style.top = '55%';  // Adjust these values as needed
-  resultDiv.style.left = '50%';
-  resultDiv.style.transform = 'translate(-50%, -50%)';
-  resultDiv.innerHTML = 'Waiting for result...';  // Initial text
-  backgroundDiv.appendChild(resultDiv);
+    const spinnerContainer = document.createElement('div');
+    spinnerContainer.className = 'spinner';
+    spinnerContainer.id = 'spinnerContainer';
+    container.appendChild(spinnerContainer);
+    Object.assign(spinnerContainer.style, {
+      position: 'relative',
+      overflowX: 'hidden',
+      backgroundColor: 'white',
+      boxShadow: '0px 5px 7px -2px rgba(0, 0, 0, 0.4)',
+      borderRadius: '5px',
+      maxWidth: '610px',
+      minWidth: '610px',
+      borderTop: '5px solid black',
+      borderBottom: '5px solid black',
+      height: '125px'
+    });
   
-  // Create a div for the "Legends never die" message
-  const legendsDiv = document.createElement('div');
-  legendsDiv.innerHTML = 'LEGENDS NEVER DIE...';
-  legendsDiv.style.position = 'absolute';
-  legendsDiv.style.color = 'white';
-  legendsDiv.style.whiteSpace = 'nowrap';
-  legendsDiv.style.textAlign = 'center';
-  // Position and size this div according to whether we're on mobile or desktop
-  if (this.isMobile) {
-    legendsDiv.style.fontSize = '150%';
-    legendsDiv.style.top = '22.5%';
-    legendsDiv.style.left = '55%';
-  } else {
-    legendsDiv.style.fontSize = '200%';
-    legendsDiv.style.top = '45%';
-    legendsDiv.style.left = '75%';
+    const spinnerList = document.createElement('ul');
+    spinnerList.className = 'spinner-items';
+    spinnerList.id = 'spinnerList';
+    spinnerContainer.appendChild(spinnerList);
+    Object.assign(spinnerList.style, {
+      position: 'relative',
+      display: 'inline-flex',
+      margin: '0',
+      padding: '0',
+      marginLeft: '-246px',
+    });
+  
+    const emojis = ['esoteric_glochip_preview.webp', 'generic_glochip_preview.webp', 'spectral_glochip_preview.webp', 'esoteric_glochip_preview.webp', 'generic_glochip_preview.webp', 'spectral_glochip_preview.webp', 'esoteric_glochip_preview.webp', 'generic_glochip_preview.webp', 'spectral_glochip_preview.webp'];
+    emojis.forEach((emoji, index) => {
+      const item = document.createElement('li');
+      item.className = 'spinner-items__item';
+      item.id = `item${index}`;
+  
+      const img = document.createElement('img');
+      img.src = `/style/graphics/token_images/glochips/${emoji}`;
+      img.width = 125; // set the width
+      img.height = 125; // set the height
+      item.appendChild(img);
+  
+      spinnerList.appendChild(item);
+  
+      let backgroundColor;
+      switch (emoji) {
+        case 'generic_glochip_preview.webp':
+          backgroundColor = '#c5cbd1';
+          break;
+        case 'esoteric_glochip_preview.webp':
+          backgroundColor = '#b19d06';
+          break;
+        case 'spectral_glochip_preview.webp':
+          backgroundColor = '#7718c5';
+          break;
+        default:
+          backgroundColor = 'transparent';
+      }
+  
+      Object.assign(item.style, {
+        display: 'block',
+        listStyleType: 'none',
+        fontSize: '32px',
+        color: '#c2c2c2',
+        borderLeft: '5px solid black',
+        width: '134px',
+        maxWidth: '134px',
+        overflow: 'hidden',
+        textAlign: 'center',
+        backgroundColor: backgroundColor,
+      });
+    });
+  
+    // const emojis = ['🐶', '🐷', '🐸', '🐶', '🐷', '🐸', '🐶', '🐷', '🐸'];
+    // emojis.forEach((emoji, index) => {
+    //   const item = document.createElement('li');
+    //   item.className = 'spinner-items__item';
+    //   item.id = `item${index}`;
+    //   item.textContent = emoji;
+    //   spinnerList.appendChild(item);
+    //   let backgroundColor;
+    //   switch (emoji) {
+    //     case '🐶':
+    //       backgroundColor = '#e5a3ff';
+    //       break;
+    //     case '🐷':
+    //       backgroundColor = '#9bfff9';
+    //       break;
+    //     case '🐸':
+    //       backgroundColor = '#b3ffb3';
+    //       break;
+    //     default:
+    //       backgroundColor = 'transparent';
+    //   }
+    //   Object.assign(item.style, {
+    //     display: 'block',
+    //     listStyleType: 'none',
+    //     padding: '32px 0',
+    //     fontSize: '32px',
+    //     color: '#c2c2c2',
+    //     borderLeft: '5px solid yellow',
+    //     width: '117px',
+    //     maxWidth: '117px',
+    //     overflow: 'hidden',
+    //     textAlign: 'center',
+    //     backgroundColor: backgroundColor,
+    //   });
+    // });
+  
+  
+    const spinnerMarker = document.createElement('div');
+    spinnerMarker.className = 'spinner__marker';
+    spinnerMarker.id = 'spinnerMarker';
+    spinnerContainer.appendChild(spinnerMarker);
+    Object.assign(spinnerMarker.style, {
+      position: 'absolute',
+      height: '100%',
+      width: '3px',
+      backgroundColor: 'yellow',
+      transform: 'translateX(-50%)',
+      left: '50%',
+      top: '0',
+    });
+  
+    console.log(this.glochipType)
+  
+    this.spinnerAnimation = new SpinnerAnimation({
+      container: 'spinnerContainer',
+      list: 'spinnerList',
+      outcome: this.glochipType
+    });
+    
+    setTimeout(() => {
+      if (!this.spinnerAnimation.started) {
+        this.spinnerAnimation.start();
+      } else {
+        console.log("Animation is already running.");
+      }
+    }, 1000); // delay of 1 second
   }
-  legendsDiv.style.transform = 'translate(-50%, -50%)';
-  backgroundDiv.appendChild(legendsDiv);
 
-  // Create a similar div for the "Nice Try" message
-  const tryDiv = document.createElement('div');
-  tryDiv.innerHTML = 'Nice Try!';
-  // ... set the style properties for this div as needed ...
-  tryDiv.style.position = 'absolute';
-  tryDiv.style.color = 'white';
-  tryDiv.style.whiteSpace = 'nowrap';
-  tryDiv.style.textAlign = 'center';
-  // Position and size this div according to whether we're on mobile or desktop
-  if (this.isMobile) {
-    tryDiv.style.fontSize = '150%';
-    tryDiv.style.top = '12.5%';
-    tryDiv.style.left = '52.5%';
-  } else {
-    tryDiv.style.fontSize = '200%';
-    tryDiv.style.top = '40%';
-    tryDiv.style.left = '75%';
+  removeSpinner() {
+    this.spinnerAnimation = null;
   }
-  tryDiv.style.transform = 'translate(-50%, -50%)';
-  backgroundDiv.appendChild(tryDiv);
-
-
-  // Create a similar div for the "LUNC burned" message
-  const luncDiv = document.createElement('div');
-  luncDiv.innerHTML = 'LUNC "burned": ' + this.points;
-  // ... set the style properties for this div as needed ...
-  luncDiv.style.position = 'absolute';
-  luncDiv.style.color = 'white';
-  luncDiv.style.whiteSpace = 'nowrap';
-  luncDiv.style.textAlign = 'center';
-  // Position and size this div according to whether we're on mobile or desktop
-  if (this.isMobile) {
-    luncDiv.style.fontSize = '150%';
-    luncDiv.style.top = '16%';
-    luncDiv.style.left = '50%';
-  } else {
-    luncDiv.style.fontSize = '200%';
-    luncDiv.style.top = '35%';
-    luncDiv.style.left = '75%';
-  }
-  luncDiv.style.transform = 'translate(-50%, -50%)';
-  backgroundDiv.appendChild(luncDiv);
-
-
+  
+    showResult() {
+      // //create a result image
+      // const resultImage = document.createElement('img');
+      // resultImage.style.position = 'absolute';
+      // resultImage.style.top = '50%';
+      // resultImage.style.left = '50%';
+      // resultImage.style.transform = 'translateX(-50%';
+      // resultImage.src = '/style/graphics/token_images/holokeys/' + this.glochipType + '.webp';
+      // Create a new paragraph element
+      const resultParagraph = document.createElement('p');
+    
+      // Set the text of the paragraph
+      resultParagraph.innerText = `You just won a ${this.glochipType}!`;
+      resultParagraph.style.color = 'white';
+      resultParagraph.style.position = 'absolute';
+      resultParagraph.style.top = '67%';
+      resultParagraph.style.left = '50%';
+      resultParagraph.style.transform = 'translateX(-50%';
+    
+      // Append the paragraph to the resultSpinnerDiv
+      const resultSpinnerDiv = document.querySelector('.result-spinner-div');
+      // resultSpinnerDiv.appendChild(resultImage);
+      resultSpinnerDiv.appendChild(resultParagraph);
+    
+      const resultSpinnerOverflow = document.querySelector('.result-spinner-overflow');
+      // Add a click event listener to the resultSpinnerDiv
+      resultSpinnerOverflow.addEventListener('click', () => {
+        // Remove the resultSpinnerDiv when it's clicked
+        resultSpinnerDiv.remove();
+        resultSpinnerOverflow.remove();
+      });
+    }
+  
+  // FOR GUEST SHIT
+  // if(window.client.gloSession)
+  
+    playWinningScreen() {
+      this.winScreen = true;
+      // Create a div for the background
+      const backgroundDiv = document.createElement('div');
+      backgroundDiv.id = 'winning-background-div';
+      backgroundDiv.style.zIndex = '2';
+      const contentContainer = document.getElementById('content-container');
+      contentContainer.appendChild(backgroundDiv);
+      // var audio = new Audio('style/audio/music/music2-.mp3');   
+      // audio.volume = 0.02;
+      // audio.play();
+  
+      let vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+  
+      if (this.isMobile) {
+        backgroundDiv.style.position = 'fixed';
+        backgroundDiv.style.top = 'calc(5.54 * var(--vh))';
+        backgroundDiv.style.left = '4.1vw';
+        backgroundDiv.style.width = '91.8vw';
+        backgroundDiv.style.height = window.winScreenHeight;
+      } else {
+        backgroundDiv.style.position = 'absolute';
+        backgroundDiv.style.top = '0';
+        backgroundDiv.style.left = '0';
+        backgroundDiv.style.width = '100%';
+        backgroundDiv.style.height = '100%';
+      }
+  
+      /*winning card*/
+      const winningCard = document.createElement('div');
+      winningCard.id = 'winningCard';
+      winningCard.style.display = 'flex';
+      winningCard.style.position = 'absolute';
+      winningCard.style.justifyContent = 'center';
+      winningCard.style.height = '100%';
+      winningCard.style.width = '100%';
+      winningCard.style.left = '50%';
+      winningCard.style.transform = 'translateX(-50%)';
+      backgroundDiv.appendChild(winningCard);
+  
+  
+    /* temporarily blocked out winning screen bg image */
+    // Create an image element for the webp
+    const webpImage = document.createElement('img');
+    webpImage.id = 'webpImage';
+    if (this.isMobile) {
+      webpImage.src = 'style/graphics/winning_screen_mobile.webp';
+    }
+    else {
+      if (!window.client.gloSession) {
+        console.log('no glosession', window.client.gloSession, window.client.gloInfo)
+        webpImage.src = 'style/graphics/winning_screen.webp';
+      } else {
+        if (window.client.gloInfo.activeVictory) {
+          webpImage.src = '/style/graphics' + window.client.gloInfo.activeVictory.metadata.mainImg;
+        } else {
+          webpImage.src = 'style/graphics/winning_screen.webp';
+        }
+      }
+    }
+    webpImage.style.position = 'absolute';
+    // webpImage.style.display = 'none';
+    webpImage.style.width = '100%';
+    webpImage.style.height = '100%'; // Set the height to 100%
+    webpImage.style.top = '50%'; // Set the top to 50%
+    webpImage.style.left = '50%'; // Set the left to 50%
+    webpImage.style.transform = 'translate(-50%, -50%)';
+    winningCard.appendChild(webpImage);
+  
     // Create a div for the username
     const usernameDiv = document.createElement('div');
     usernameDiv.style.position = 'absolute';
-    usernameDiv.style.top = '5%';
-    usernameDiv.style.left = '25%';
-    usernameDiv.style.fontSize = '250%';
-    usernameDiv.style.transform = 'translate(-50%, -50%)';
+    usernameDiv.style.top = '3%';
+    usernameDiv.style.fontSize = '300%';
     usernameDiv.style.color = 'white';
     usernameDiv.style.whiteSpace = 'nowrap';
-    usernameDiv.innerHTML = window.client.gloInfo.username;
+    if (window.client.gloInfo.username.length > 20) {
+      usernameDiv.innerHTML = window.client.gloInfo.username.substring(0, 8) + '...' + window.client.gloInfo.username.substring(window.client.gloInfo.username.length - 5);
+    } else {
+      usernameDiv.innerHTML = window.client.gloInfo.username;
+    }
     if (this.isMobile) {
       usernameDiv.style.top = '7.5%';
       usernameDiv.style.left = '50%';
     }
-    backgroundDiv.appendChild(usernameDiv);
-
-    // create a div for the share button
-    const shareDiv = document.createElement('div');
-    shareDiv.style.position = 'absolute';
+    winningCard.appendChild(usernameDiv);
+  
+  
+    // Create a similar div for the "LUNC burned" message
+    const luncDiv = document.createElement('div');
+    luncDiv.innerHTML = 'LUNC "burned": ' + window.luncMachine.gameCoordinator.points;
+    // ... set the style properties for this div as needed ...
+    luncDiv.style.position = 'absolute';
+    luncDiv.style.color = 'white';
+    luncDiv.style.whiteSpace = 'nowrap';
+    luncDiv.style.textAlign = 'center';
+    // Position and size this div according to whether we're on mobile or desktop
     if (this.isMobile) {
-      shareDiv.style.top = '28%';
-      shareDiv.style.left = '77%';
+      luncDiv.style.fontSize = '150%';
+      luncDiv.style.top = '16%';
+      luncDiv.style.left = '50%';
     } else {
-      shareDiv.style.top = '70%';
-      shareDiv.style.left = '70%';
+      luncDiv.style.fontSize = '150%';
+      luncDiv.style.top = '12.5%';
     }
-    shareDiv.style.fontSize = '150%';
-    shareDiv.style.transform = 'translate(-50%, -50%)';
-    shareDiv.style.color = 'white';
-    shareDiv.style.outline = '0.15em solid white';
-    shareDiv.innerHTML = 'Share';
-    backgroundDiv.appendChild(shareDiv);
-
-    // Add an event listener to the share button
-    shareDiv.addEventListener('click', function() {
-        html2canvas(document.body).then(function(canvas) {
-            canvas.toBlob(function(blob) {
-                var file = new File([blob], 'luncFlex.png', {type: 'image/png', lastModified: Date.now()});
-                var url = URL.createObjectURL(file);
-
-                if (navigator.share) {
-                    navigator.share({
-                        title: 'LuncFlex',
-                        text: 'Check this out!',
-                        files: [file]
-                    })
-                    .then(() => console.log('Successful share'))
-                    .catch((error) => console.log('Error sharing', error));
-                } else {
-                    console.log('Web Share not supported on this browser');
-                }
-
-                // Don't forget to revoke the object URL to avoid memory leaks
-                URL.revokeObjectURL(url);
-            });
-        });
-    });
-
-
-    // create a div for the play again button
-    const againDiv = document.createElement('div');
-    againDiv.style.position = 'absolute';
-    if (this.isMobile) {
-      againDiv.style.top = '28%';
-      againDiv.style.left = '52%';
-
+    winningCard.appendChild(luncDiv);
+  
+    //winning portal
+    const winningPortal = document.createElement('div');
+    winningPortal.style.position = 'absolute';
+    winningPortal.style.right = '5%';
+    winningPortal.style.top = '37.5%';
+    winningPortal.style.height = '30%';
+    winningPortal.style.width= '30%';
+    winningPortal.style.border = '1px solid white';
+    winningPortal.style.backgroundColor = 'black';
+    winningPortal.style.borderRadius = '10px';
+    winningCard.appendChild(winningPortal);
+  
+    if (!window.client.gloSession || !window.client.gloInfo.walletID.startsWith('terra')) {
+      const signInText = document.createElement('div');
+      signInText.id = 'signInText';
+      signInText.style.position = 'relative';
+      signInText.style.color = 'white';
+      signInText.style.fontSize = '1.4em';
+      signInText.style.left = '50%';
+      signInText.style.width = '90%';
+      signInText.style.transform = 'translateX(-50%)';
+      signInText.style.textAlign = 'center';
+      signInText.style.top = '20%';  // Adjust these values as needed
+      signInText.innerHTML = 'log in with a wallet<br><br>and<br><br>play again to win rewards';
+      winningPortal.appendChild(signInText);
     } else {
-      againDiv.style.top = '75%';
-      againDiv.style.left = '70%';
-    }
-    againDiv.style.fontSize = '150%';
-    againDiv.style.transform = 'translate(-50%, -50%)';
-    againDiv.style.color = 'white';
-    againDiv.style.outline = '0.15em solid white';
-    againDiv.innerHTML = 'Play Again';
-    backgroundDiv.appendChild(againDiv);
-
-    // create a div for main menu button
-    const menuDiv = document.createElement('div');
-    menuDiv.style.position = 'absolute';
-    menuDiv.style.pointerEvents = 'auto';
-    if (this.isMobile) {
-      menuDiv.style.top = '28%';
-      menuDiv.style.left = '20%';
-    } else {
-      menuDiv.style.top = '80%';
-      menuDiv.style.left = '70%';
-    }
-    menuDiv.style.fontSize = '150%';
-    menuDiv.style.transform = 'translate(-50%, -50%)';
-    menuDiv.style.color = 'white';
-    menuDiv.style.outline = '0.15em solid white';
-    menuDiv.innerHTML = 'Main Menu';
-    backgroundDiv.appendChild(menuDiv);
-
-    // Set a click event listener to play again after game over
-    againDiv.addEventListener('click', () => {
-      this.playAgain = true;
-      // audio.pause();
-      document.body.removeChild(backgroundDiv);
-      console.log('first level data:', this.firstLevelData);
-      setTimeout(() => {
-        this.gameStartButton.disabled = false;
-        this.firstGame = true;
-        this.reset(this.firstLevelData);
-        this.setCutscene(this.firstLevelData);
-      }, 1000);
-    });
+      // loading spinner
+      const loadingSpinner = document.createElement('div');
+      loadingSpinner.id = 'loadingSpinner';
+      loadingSpinner.className = 'winning-spinner';
+      loadingSpinner.style.left = '50%';
+      loadingSpinner.style.top = '20%';
+      loadingSpinner.style.transform = 'translateX(-50%)';
     
-    if (!this.isMobile) {
-    // Reset display for video backgrounds
-    videoBackground.videos.forEach((video) => {
-      video.style.display = '';
-    });
+      for(let i = 1; i <= 5; i++) {
+        const square = document.createElement('div');
+        square.id = 'winning-spinner-' + i;
+        loadingSpinner.appendChild(square);
+      }
+    
+      winningPortal.appendChild(loadingSpinner);
+    
+    
+      // Create a div for displaying the result
+      const awaitText = document.createElement('div');
+      awaitText.id = 'awaitText';  // Set an id so we can find it later
+      awaitText.style.position = 'relative';
+      awaitText.style.color = 'white';
+      awaitText.style.fontSize = '85%';
+      awaitText.style.left = '50%';
+      awaitText.style.transform = 'translateX(-50%)';
+      awaitText.style.textAlign = 'center';
+      awaitText.style.top = '75%';  // Adjust these values as needed
+      awaitText.innerHTML = 'waiting for result...';  // Initial text
+      winningPortal.appendChild(awaitText);
+    
+      // html for final result
+      const resultImg = document.createElement('img');
+      resultImg.id = 'resultImg';
+      winningPortal.appendChild(resultImg);
+      const resultBool = document.createElement('div');
+      resultBool.id = 'resultBool';
+      winningPortal.appendChild(resultBool);
+      const resultPerformance = document.createElement('div');
+      resultPerformance.id = 'resultPerformance';
+      winningPortal.appendChild(resultPerformance);
+      const resultClaim = document.createElement('button');
+      resultClaim.style.display = 'none';
+      resultClaim.id = 'resultClaim';
+      resultClaim.className = 'mint-button';
+      winningPortal.appendChild(resultClaim);
     }
-
-    // Set a click event listener to go to main menu
-    menuDiv.addEventListener('click', () => {
-      window.dispatchEvent(new CustomEvent('menuGameStateChange', {
-        detail: { state: "menu" },
-      }));
-
-      console.log('menu button clicked');
-      document.body.removeChild(backgroundDiv);
-      // audio.pause();
-      const luncVid = document.getElementById('canvas');
-      const playButton = document.getElementById('credit-check');
-      const nav = document.getElementById('nav');
-      const dash = document.getElementById('dashboard');
-      if (!this.isMobile) {
-      videoBackground = window.videoBackground;
-      videoBackground.setElements(videoBackground.videos[videoBackground.videoElementIndex]);
-      videoBackground.transitionTo('play_main', () => {
-        videoBackground.toggleHideVideo();
-      setTimeout(() => {
-        this.mainMenu.style.opacity = 1;
-        this.gameStartButton.disabled = false;
-        this.mainMenu.style.visibility = 'visible';
-        this.mainMenu.style.display = '';
-        luncVid.style.visibility = 'visible';
-        playButton.style.display = 'flex';
-        nav.style.display = 'flex';
-        dash.style.display = 'flex';
-      }, 1000);
+  
+    //buttons container
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.position = 'absolute';
+    buttonsContainer.style.bottom = '5%';
+    buttonsContainer.style.height = '7.5%';
+    buttonsContainer.style.display = 'flex';
+    buttonsContainer.style.background = 'rgba(0, 0, 0, 0.5)'; // 50% transparent black
+    winningCard.appendChild(buttonsContainer);
+  
+    // // create a div for the share button
+    // const shareDiv = document.createElement('button');
+    // shareDiv.className = 'winning-button';
+  
+    // // create a span for the text
+    // const shareSpan = document.createElement('span');
+    // shareSpan.textContent = 'Share';
+  
+    // // append the span to the button
+    // shareDiv.appendChild(shareSpan);
+    // buttonsContainer.appendChild(shareDiv);
+  
+    // // Add an event listener to the share button
+    // shareDiv.addEventListener('click', function() {
+    //   console.log('share clicked');
+  
+    //   // Get the winningCard element
+    //   const winningCard = document.getElementById('winningCard');
+  
+    //   // Use html2canvas to take a screenshot of the winningCard element
+    //   html2canvas(winningCard).then(canvas => {
+    //     // Create a preview box
+    //     const previewBox = document.createElement('div');
+    //     previewBox.id = 'previewBox';
+    //     previewBox.style.position = 'fixed';
+    //     previewBox.style.top = '50%';
+    //     previewBox.style.left = '50%';
+    //     previewBox.style.transform = 'translate(-50%, -50%)';
+    //     previewBox.style.border = '1px solid black';
+    //     previewBox.style.padding = '10px';
+    //     previewBox.style.background = 'white';
+    //     previewBox.style.zIndex = '4';
+    //     previewBox.style.height = '100%';
+    //     previewBox.style.width = '100%';
+  
+    //     canvas.style.position = 'absolute';
+    //     canvas.style.left = '50%';
+    //     canvas.style.top = '5%';
+    //     canvas.style.transform = 'translateX(-50%)';
+  
+    //     // Append the canvas to the preview box
+    //     previewBox.appendChild(canvas);
+  
+    //     // Create a copy button
+    //     const copyButton = document.createElement('button');
+    //     copyButton.textContent = 'Copy to clipboard';
+    //     copyButton.addEventListener('click', function() {
+    //       // Convert the canvas to a Blob
+    //       canvas.toBlob(function(blob) {
+    //         // Create a ClipboardItem object
+    //         const item = new ClipboardItem({ 'image/png': blob });
+  
+    //         // Copy the ClipboardItem to the clipboard
+    //         navigator.clipboard.write([item]);
+    //       });
+    //     });
+  
+    //     // Append the copy button to the preview box
+    //     previewBox.appendChild(copyButton);
+  
+    //     // Append the preview box to the body
+    //     document.body.appendChild(previewBox);
+    //   });
+    // });
+  
+  
+      // create a div for the play again button
+      const againDiv = document.createElement('button');
+      againDiv.className = 'winning-button';
+  
+      // create a span for the text
+      const againSpan = document.createElement('span');
+      againSpan.textContent = 'Play Again';
+  
+      // append the span to the button
+      againDiv.appendChild(againSpan);
+      buttonsContainer.appendChild(againDiv);
+  
+      // create a div for main menu button
+      const menuDiv = document.createElement('button');
+      menuDiv.className = 'winning-button';
+      menuDiv.style.pointerEvents = 'auto';
+  
+      // create a span for the text
+      const menuSpan = document.createElement('span');
+      menuSpan.textContent = 'Main Menu';
+  
+      // append the span to the button
+      menuDiv.appendChild(menuSpan);
+      buttonsContainer.appendChild(menuDiv);
+  
+      // Set a click event listener to play again after game over
+      againDiv.addEventListener('click', () => {
+        if (!this.winScreen) return;
+        this.winScreen = false;
+        if (typeof sa_event === 'function') sa_event("play_luncman_again");
+        window.luncMachine.gameCoordinator.playAgain = true;
+        // audio.pause();
+        const bg = document.getElementById('winning-background-div');
+        if (bg) bg.remove();
+        console.log('first level data:', window.luncMachine.gameCoordinator.firstLevelData);
+        setTimeout(() => {
+          window.glogo.disabled = true;
+          window.luncMachine.gameCoordinator.gameStartButton.disabled = false;
+          window.luncMachine.gameCoordinator.reset(window.luncMachine.gameCoordinator.firstLevelData);
+          window.luncMachine.gameCoordinator.setCutscene(window.luncMachine.gameCoordinator.firstLevelData);
+        }, 1000);
       });
-    } else {
-      this.mainMenu.style.opacity = 1;
-      this.gameStartButton.disabled = false;
-      this.mainMenu.style.visibility = 'visible';
-      this.mainMenu.style.display = '';
-      luncVid.style.visibility = 'visible';
-      playButton.style.display = 'flex';
-      nav.style.display = 'flex';
-      dash.style.display = 'flex';
-    }
-    });
-  }
 
-}
+      // document.addEventListener('keydown', (event) => {
+      //   if (!window.luncMachine.gameCoordinator.playingCutscene && window.luncMachine.gameCoordinator.gameStartButton.disabled && !this.winScreen) return;
+      //   if (event.code === 'Space') {
+      //     this.winScreen = false;
+      //     sa_event("play_luncman_again");
+      //     window.luncMachine.gameCoordinator.playAgain = true;
+      //     // audio.pause();
+      //     const bg = document.getElementById('winning-background-div');
+      //     if (bg) bg.remove();
+      //     console.log('first level data:', window.luncMachine.gameCoordinator.firstLevelData);
+      //     setTimeout(() => {
+      //       window.glogo.disabled = true;
+      //       window.luncMachine.gameCoordinator.gameStartButton.disabled = false;
+      //       window.luncMachine.gameCoordinator.reset(window.luncMachine.gameCoordinator.firstLevelData);
+      //       window.luncMachine.gameCoordinator.setCutscene(window.luncMachine.gameCoordinator.firstLevelData);
+      //     }, 1000);
+      //   }
+      // });
+      
+      if (!this.isMobile) {
+      // Reset display for video backgrounds
+      videoBackground.videos.forEach((video) => {
+        video.style.display = '';
+      });
+      }
+  
+      // Set a click event listener to go to main menu
+      menuDiv.addEventListener('click', () => {
+        if (!this.winScreen) return;
+        this.winScreen = false;
+        window.dispatchEvent(new CustomEvent('menuGameStateChange', {
+          detail: { state: "menu" },
+        }));
+  
+        console.log('menu button clicked');
+        const bg = document.getElementById('winning-background-div');
+        if (bg) bg.remove();
+        // audio.pause();
+        if (!this.isMobile) {
+          window.luncMachine.gameCoordinator.mainMenu.style.opacity = "1";
+          window.luncMachine.gameCoordinator.gameStartButton.disabled = false;
+          window.luncMachine.playButtonDisabled = false;
+          window.luncMachine.gameCoordinator.mainMenu.style.visibility = 'visible';
+          window.luncMachine.gameCoordinator.mainMenu.style.display = '';
+          window.luncMachine.gameCoordinator.leftCover.style.visibility = 'hidden';
+          window.luncMachine.gameCoordinator.rightCover.style.visibility = 'hidden';
+          document.getElementById('luncman-div').style.visibility = 'visible';
+      } else {
+        window.luncMachine.gameCoordinator.mainMenu.style.opacity = '1';
+        window.luncMachine.gameCoordinator.gameStartButton.disabled = false;
+        window.luncMachine.gameCoordinator.mainMenu.style.visibility = 'visible';
+        window.luncMachine.gameCoordinator.mainMenu.style.display = '';
+        window.luncMachine.gameCoordinator.leftCover.style.visibility = 'hidden';
+        window.luncMachine.gameCoordinator.rightCover.style.visibility = 'hidden';
+      }
+      });
+    }
+  
+  }
+  
+  class SpinnerAnimation {
+    constructor({container, list, outcome}) {
+      this.tickSound = new Audio("https://freesound.org/data/previews/269/269026_5094889-lq.mp3");
+      this.tickSound.playbackRate = 4;
+      
+      this.winSound = new Audio("https://freesound.org/data/previews/511/511484_6890478-lq.mp3");
+      
+      this.firstRound = true;
+  
+      this.reset();
+  
+      this.spinnerContainer = document.getElementById(container);
+      this.spinnerList = this.spinnerContainer.children.namedItem(list);
+      this.spinnerMarker = this.spinnerContainer.children.namedItem("spinnerMarker");
+      this.spinnerItems = this.spinnerList.children;
+      this.outcome = outcome;
+      console.log('inputted outcome:', outcome);
+      console.log(`Spinner outcome set to: ${this.outcome}`);
+    }
+  
+    reset() {
+        this.started = false;
+        this.stopped = false;
+        this.stopAnimation = false;
+        this.lowerSpeed = 0;
+        this.ticks = 0;
+        this.offSet = 0;
+        this.recycle = false;
+        this.tick = false;
+        this.state = null;
+        this.speed = 0;
+        this.winningItem = 0;
+        this.firstRound = false;
+    }
+  
+    start(speed = 1200) {
+        this.started = true;
+        this.speed = speed;
+        console.log(`Starting spinner with speed: ${this.speed}`);
+        this.loop();
+    }
+  
+    loop() {
+        let dt = 0; // Delta Time is the amount of time between two frames
+        let last = 0; // Last time of frame
+  
+        // The Animation Loop
+        function loop(ms) {
+  
+            if(this.recycle) {
+                this.recycle = false;
+                const item = this.spinnerList.firstElementChild;
+                this.spinnerList.append(item);
+            }
+  
+            if(this.tick) {
+                this.tick = false;
+                this.tickSound.play();
+            }
+  
+            this.offSet += this.speed * dt;
+  
+            const ct = ms / 1000; // MS == The amount of Milliseconds the animation is already going for. Divided by 1000 is the amount of seconds
+            dt = ct - last;
+            last = ct;
+  
+            // Move the item to the left
+            this.spinnerList.style.right = this.offSet + "px";
+          
+            if(this.offSet >= 122 ) {
+                this.recycle = true;
+                this.offSet = 0;
+                this.tick = true;
+                this.ticks += 1;
+                console.log(`Tick: ${this.ticks}, Speed: ${this.speed}`); // Log tick count and speed
+                if(this.ticks >= 25) {
+                    this.stop();
+                  console.log("Decided to stop");
+                }
+            }
+  
+            if(this.stopped) {
+                let stopped = false;
+                if(!stopped) this.speed -= this.lowerSpeed;
+                if(this.speed <= 0) {
+                    stopped = true;
+                    this.speed = 0;
+                }
+  
+                if(stopped) {
+                    if(this.offSet >= 58.6) {
+                        this.offSet += 6;
+                    } else {
+                        this.offSet -= 6;
+                    }
+                    console.log(`Adjusting Offset: ${this.offSet}`);
+  
+                    if(this.offSet >= 122 || this.offSet <= 0) {
+                        this.stopAnimation = true;
+                        
+                        this.winSound.play();
+                      
+                        if(this.offSet >= 122) {
+                          this.winningItem = 5;
+                          this.spinnerItems.item(5).classList.add("win");
+                          this.offSet = 122;
+                        }
+                        
+                        if(this.offSet <= 0) {
+                          this.winningItem = 4;
+                          this.spinnerItems.item(4).classList.add("win");
+                          this.offSet = 0;
+                        }
+                      
+                        console.log(`Winning Item: ${this.winningItem}`);
+  
+                        // Delay the hiding of spinnerContainer by 1 second
+                        setTimeout(() => {
+                          this.spinnerContainer.style.visibility = 'hidden';
+                          this.final();
+                        }, 1000);
+                      
+                    }
+                  
+                }
+            }
+  
+            if(!this.stopAnimation) {
+                requestAnimationFrame(loop);
+            }
+        }
+  
+        // Bind Class to loop function
+        loop = loop.bind(this);
+        requestAnimationFrame(loop);
+    }
+  
+    stop() {
+        this.stopped = true;
+        console.log(`Stopping with outcome: ${this.outcome}`);
+        // Calculate a random lower speed
+        switch(this.outcome){
+          case 'generic glochip':
+            this.lowerSpeed = 8;
+            break;
+          case 'esoteric glochip':
+            this.lowerSpeed = 12;
+            break;
+          case 'spectral glochip':
+            this.lowerSpeed = 13.85;
+            break;
+          default:
+             console.log("Unknown outcome, using default lowerSpeed");
+             this.lowerSpeed = 10; // Default or fallback value
+              break;
+        }
+    }
+  
+    final(){
+      const spinnerContainer = document.querySelector('.result-spinner-container');
+  
+      const spinWinContainer = document.createElement('div');
+      spinWinContainer.id = 'spinWinContainer';
+      spinWinContainer.style.position = 'absolute';
+      spinWinContainer.style.top = '12.5%';
+      spinWinContainer.style.left = '5%';
+      spinWinContainer.style.border = '3px solid black';
+      spinWinContainer.style.width = '250px';
+      spinWinContainer.style.height = '250px';
+      spinWinContainer.style.display = 'flex';
+      spinWinContainer.style.justifyContent = 'center';
+      spinWinContainer.style.alignItems = 'center';
+      spinnerContainer.appendChild(spinWinContainer);
+  
+      const spinWinImage = document.createElement('img');
+      spinWinImage.id = 'claim-spinWinImage';
+      spinWinImage.style.position = 'absolute';
+      spinWinImage.style.height = '225px';
+      spinWinImage.style.width = '225px';
+      spinWinContainer.appendChild(spinWinImage);
+  
+      const winMessage = document.createElement('div');
+      winMessage.id = 'claim-winMessage';
+      winMessage.style.position = 'absolute';
+      winMessage.innerText = `You just won a ${this.outcome}!`;
+      winMessage.style.top = '33%';
+      winMessage.style.width = '45%';
+      winMessage.style.left = '52.5%';
+      winMessage.style.fontSize = '1em';
+      winMessage.style.textAlign = 'center';
+      winMessage.style.fontWeight = '900';
+      spinnerContainer.appendChild(winMessage);
+  
+      const winButtons = document.createElement('div');
+      winButtons.id = 'claim-winButtons';
+      winButtons.style.position = 'absolute';
+      winButtons.style.bottom = '25%';
+      winButtons.style.height = '10%';
+      winButtons.style.width = '45%';
+      winButtons.style.left = '50%';
+      winButtons.style.display = 'flex';
+      winButtons.style.justifyContent = 'space-evenly';
+      spinnerContainer.appendChild(winButtons);
+  
+      const backButton = document.createElement('button');
+      backButton.id = 'claim-backButton';
+      backButton.innerText = 'back';
+      backButton.style.color = 'white';
+      backButton.style.backgroundColor = 'black';
+      backButton.style.cursor = 'pointer';
+      winButtons.appendChild(backButton);
+      backButton.addEventListener('click', () => {
+        gsap.to(spinnerContainer, {
+          opacity: 0,
+          duration: 0.75,
+          onComplete: () => spinnerContainer.style.display = 'none'
+        });
+      });
+      
+      const sellButton  = document.createElement('button');
+      sellButton.id = 'claim-sellButton';
+      sellButton.innerText = 'sell';
+      sellButton.style.color = 'white';
+      sellButton.style.backgroundColor = 'black';
+      sellButton.style.cursor = 'pointer';
+      winButtons.appendChild(sellButton);
+      sellButton.addEventListener('click', () => {
+        document.querySelectorAll('.result-spinner-container').forEach(element => {
+          element.style.display = 'none';
+        });
+
+        // document.querySelectorAll('#winning-background-div').forEach(element => {
+        //   element.style.display = 'none';
+        // });
+
+        document.getElementById('content-container').style.display = 'none';
+        if (!window.nftMachine.gloMartInstance) window.nftMachine.gloMartInstance = new GloMart();
+        window.videoBackground.transitionTo('printer_glomart', () => {
+          window.windowState = 'marketplace';
+          const event = new Event('WindowStateChanged');
+          window.dispatchEvent(event);
+
+          setTimeout(() => {
+            window.nftMachine.gloMartInstance.handleNavItemClick('sell');
+            window.nftMachine.gloMartInstance.activePage = 'Sell';
+            window.luncMachine.gameCoordinator.removeSpinner();
+          }, 100);
+        });
+      });
+      
+      const mintButton  = document.createElement('button');
+      mintButton.id = 'claim-mintButton';
+      mintButton.innerText = 'open';
+      mintButton.style.color = 'white';
+      mintButton.style.backgroundColor = 'black';
+      mintButton.style.cursor = 'pointer';
+      winButtons.appendChild(mintButton);
+      mintButton.addEventListener('click', () => {
+        document.querySelectorAll('.result-spinner-container').forEach(element => {
+          element.style.display = 'none';
+        });
+
+        // document.querySelectorAll('#winning-background-div').forEach(element => {
+        //   element.style.display = 'none';
+        // });
+
+        document.getElementById('content-container').style.display = 'none';
+        if (!window.nftMachine.gloMintInstance) window.nftMachine.gloMintInstance = new GloMint();
+        window.windowState = 'mint';
+        window.videoBackground.transitionTo('printer_glomint', () => {
+          // Dispatch a custom event to notify that windowState has changed
+          const event = new Event('WindowStateChanged');
+          window.dispatchEvent(event);
+        });
+      });
+  
+      switch (this.outcome) {
+        case 'generic glochip':
+            spinWinImage.src = '/style/graphics/token_images/glochips/generic_glochip_preview.webp';
+            spinWinContainer.style.background = '#c5cbd1';
+            winMessage.innerText = `You just won a ${this.outcome}!`;
+            break;
+        case 'esoteric glochip':
+            spinWinImage.src = '/style/graphics/token_images/glochips/esoteric_glochip_preview.webp';
+            spinWinContainer.style.background = '#b19d06';
+            winMessage.innerText = `You just won an ${this.outcome}!`;
+            break;
+        case 'spectral glochip':
+            spinWinImage.src = '/style/graphics/token_images/glochips/spectral_glochip_preview.webp';
+            spinWinContainer.style.background = '#7718c5';
+            winMessage.innerText = `You just won a ${this.outcome}!`;
+            break;
+        default:
+            // Handle the case where the option doesn't match any of the above
+            console.error('Invalid option type');
+            break;
+      }
+    }
+  }
 
 class GameState {
   constructor() {
       if (GameState.instance) {
-          return GameState.instance;
+        GameState.instance.resetGameState();
       }
 
       this.luncmanInfo = null;
@@ -5170,6 +7147,29 @@ class GameState {
       this.luncmanInfo = null;
       this.fudderInfo = null;
       this.scoreInfo = null;
+
+      this.gameStarted = false;
+
+      this.playerStats = {
+        address: null,
+        username: null,
+        highestLevel: 0,
+        endTime: 0,
+        score: 0,
+        coinsCollected: 0,
+        fruitCollected: {
+          bitcoin: 0,
+          ethereum: 0,
+          solana: 0,
+          atom: 0
+        },
+        fuddersKilled: 0,
+        attacksUsed: 0,
+        attacksHit: 0,
+        deaths: 0
+      }
+
+      this.userId = window.client.gloInfo.username;
       console.log("Game state reset: Everything's back to square fucking one");
   }
 }
@@ -5190,6 +7190,9 @@ class GameEngine {
     this.running = false;
     this.started = false;
     this.gameCoord = gameCoord;
+    console.log('setting timestep to', this.timestep)
+    this.boundMainLoop = null;
+    this.boundMainLoop = this.mainLoop.bind(this);
   }
 
   /**
@@ -5242,6 +7245,7 @@ class GameEngine {
         entity.update(elapsedMs);
       }
     });
+    this.gameCoord.update();
   }
 
   /**
@@ -5252,24 +7256,46 @@ class GameEngine {
     this.elapsedMs = 0;
   }
 
+  restart() {
+    // First, stop the game engine if it's running
+    this.stop();
+
+    this.entityList = []; // Clear the entity list
+  
+    this.gameCoord = null;
+  
+    // Reset game-specific properties
+    this.elapsedMs = 0;
+    this.lastFrameTimeMs = 0;
+    this.fps = this.maxFps;
+    this.framesThisSecond = 0;
+    this.lastFpsUpdate = 0;
+    this.boundMainLoop = null;
+  
+    // Optionally, remove or reset any DOM elements or event listeners associated with the game
+    if (this.fpsDisplay) {
+      this.fpsDisplay.textContent = '';
+    }
+  
+    this.start();
+    console.log('Game engine restart completed.');
+  }  
+
   /**
    * Draws an initial frame, resets a few tracking variables related to animation, and calls
    * the mainLoop function to start the engine
    */
   start() {
-    if (!this.started) {
-      this.started = true;
-
+    if (!this.running && this.frameId === 0) { // Check if the engine is not already running and no frame request is pending
+      this.running = true; // Indicate that the engine is now running
+      this.started = true; // Indicate that the engine has started
       this.frameId = requestAnimationFrame((firstTimestamp) => {
         this.draw(1, []);
-        this.running = true;
         this.lastFrameTimeMs = firstTimestamp;
         this.lastFpsUpdate = firstTimestamp;
         this.framesThisSecond = 0;
-
-        this.frameId = requestAnimationFrame((timestamp) => {
-          this.mainLoop(timestamp);
-        });
+        // Correctly kick off the main loop
+        this.frameId = requestAnimationFrame(this.boundMainLoop);
       });
     }
   }
@@ -5278,16 +7304,44 @@ class GameEngine {
    * Stops the engine and cancels the current animation frame
    */
   stop() {
-    this.running = false;
-    this.started = false;
-    cancelAnimationFrame(this.frameId);
+    if (this.frameId !== 0) {
+      cancelAnimationFrame(this.frameId); // Ensure the current animation frame is cancelled
+      this.frameId = 0; // Reset frameId to indicate no pending frame request
+      this.running = false; // Indicate that the engine is no longer running
+      this.started = false; // Indicate that the engine is no longer started
+    }
   }
+
+  /**
+   * Changes the game engine speed for duration milliseconds by speedPercent percent.
+   * @param {number} duration - The amount of milliseconds the changed speed should last.
+   * @param {number} speedPercent - The percent speed the game should run at (e.g., 0.5 for 50% speed).
+   */
+  changeSpeed(duration, speedPercent) {
+    const originalTimestep = this.timestep;
+    this.timestep = originalTimestep / speedPercent; // Adjust timestep based on speedPercent
+    console.log('setting timestep to', this.timestep)
+
+    // Adjust other speed-related variables here if necessary
+
+    setTimeout(() => {
+      this.timestep = originalTimestep; // Restore original game speed after duration
+      // Restore any other adjusted variables to their original state
+    }, duration);
+  }
+
+  /**
+   * Resets the game engine speed back to normal.
+   */
+    resetSpeed() {
+      this.timestep = 1000 / this.maxFps;
+    }
 
   /**
    * The loop which will process all necessary frames to update the game's entities
    * prior to animating them
    */
-  processFrames(timestamp) {
+  processFrames() {
     let numUpdateSteps = 0;
     while (this.elapsedMs >= this.timestep) {
       this.update(this.timestep, this.entityList);
@@ -5305,17 +7359,18 @@ class GameEngine {
    * will kick off the loops to update and draw the game's entities.
    * @param {number} timestamp - The amount of MS which has passed since starting the game engine
    */
-  engineCycle(timestamp) {
-    if (timestamp < this.lastFrameTimeMs + (1000 / this.maxFps)) {
-      this.frameId = requestAnimationFrame((nextTimestamp) => {
-        this.mainLoop(nextTimestamp);
-      });
-      return;
+  engineCycle(gameTime) {
+    if (!this.running) return;
+
+    // All timing calculations should use gameTime
+    if (gameTime < this.lastFrameTimeMs + (1000 / this.maxFps)) {
+        this.frameId = requestAnimationFrame(this.boundMainLoop);
+        return;
     }
 
-    this.elapsedMs += timestamp - this.lastFrameTimeMs;
-    this.lastFrameTimeMs = timestamp;
-    this.updateFpsDisplay(timestamp);
+    this.elapsedMs += gameTime - this.lastFrameTimeMs;
+    this.lastFrameTimeMs = gameTime;
+    this.updateFpsDisplay(gameTime);
     this.processFrames();
     this.draw(this.elapsedMs / this.timestep, this.entityList);
 
@@ -5329,6 +7384,7 @@ class GameEngine {
    * @param {number} timestamp - The amount of MS which has passed since starting the game engine
    */
   mainLoop(timestamp) {
+    if (!this.running) return;
     this.engineCycle(timestamp);
   }
 }
@@ -5349,9 +7405,9 @@ class Pickup {
 
     this.fruitImages = {
       100: 'bitcoin',
-      300: 'atom',
-      500: 'eth',
-      700: 'solana',
+      200: 'atom',
+      300: 'eth',
+      400: 'solana',
       1000: 'osmo',
       2000: 'secret',
       3000: 'mars',
@@ -5630,6 +7686,7 @@ class CharacterUtil {
     this.changeDirectionEvent = new Event('changeDirectionEvent');
     this.gameCoordinator = gameCoordinator;
     this.loopCount = 0;
+    this.threshold = 15;
   }
 
   /**
@@ -5740,7 +7797,7 @@ class CharacterUtil {
    */
   checkForStutter(position, oldPosition) {
     let stutter = false;
-    const threshold = 15;
+    const threshold = this.threshold;
 
     if (position && oldPosition) {
       if (Math.abs(position.top - oldPosition.top) > threshold
@@ -6009,7 +8066,7 @@ class SoundManager {
     this.baseUrl = '/style/audio/';
     this.fileFormat = 'mp3';
     this.masterVolume = 0.02;
-    this.musicVolume = 0.01;
+    this.musicVolume = 0.0075;
     this.paused = false;
     this.cutscene = true;
 
@@ -6046,24 +8103,20 @@ class SoundManager {
     if (this.dotPlayer) {
       this.dotPlayer.volume = this.masterVolume;
     }
-
-    if (this.masterVolume === 0) {
-      this.stopAmbience();
-      this.stopMusic();
-    } else {
-      this.setAmbienceVolume(this.masterVolume);
-      this.setMusicVolume(0.01);
-      this.resumeAmbience(this.paused);
-      this.resumeMusic(this.paused);
-    }
   }
 
   /**
    * Plays a single sound effect
    * @param {String} sound
    */
-  play(sound) {
-    this.soundEffect = new Audio(`${this.baseUrl}${sound}.${this.fileFormat}`);
+  play(sound, onomat = false) {
+    let baseUrl;
+    if (onomat) {
+      baseUrl = '/style/audio/onomat/';
+    } else {
+      baseUrl = this.baseUrl;
+    }
+    this.soundEffect = new Audio(`${baseUrl}${sound}.${this.fileFormat}`);
     this.soundEffect.volume = this.masterVolume;
     this.soundEffect.play();
   }
@@ -6073,34 +8126,37 @@ class SoundManager {
    * sound effects, but not too quickly.
    */
   playDotSound() {
-    this.queuedDotSound = true;
+    // this.queuedDotSound = true;
 
-    if (!this.dotPlayer) {
-      this.queuedDotSound = false;
-      this.dotSound = (this.dotSound === 1) ? 2 : 1;
+    // if (!this.dotPlayer) {
+      // this.queuedDotSound = false;
+      // this.dotSound = (this.dotSound === 1) ? 2 : 1;
 
-      this.dotPlayer = new Audio(
-        `${this.baseUrl}dot_${this.dotSound}.${this.fileFormat}`,
-      );
-      this.dotPlayer.onended = this.dotSoundEnded.bind(this);
-      this.dotPlayer.volume = this.masterVolume;
-      this.dotPlayer.play();
-    }
+    //   this.dotPlayer = new Audio(
+    //     `${this.baseUrl}lunc.${this.fileFormat}`,
+    //   );
+    //   // this.dotPlayer.onended = this.dotSoundEnded.bind(this);
+    //   this.dotPlayer.volume = this.masterVolume;
+    //   this.dotPlayer.play();
+    // }
+    const dotPlay = new Audio(`${this.baseUrl}lunc.${this.fileFormat}`);
+    dotPlay.volume = this.masterVolume;
+    dotPlay.play();
   }
 
   /**
    * Deletes the dotSound player and plays another dot sound if needed
    */
-  dotSoundEnded() {
-    this.dotPlayer = undefined;
+  // dotSoundEnded() {
+  //   this.dotPlayer = undefined;
 
-    if (this.queuedDotSound) {
-      this.playDotSound();
-    }
-  }
+  //   if (this.queuedDotSound) {
+  //     this.playDotSound();
+  //   }
+  // }
 
   setMusicVolume(newVolume) {
-    this.musicVolume = newVolume;
+    this.musicVolume = newVolume * 0.15;
     this.musicGainNode.gain.value = this.musicVolume;
   }
 
@@ -6147,7 +8203,12 @@ class SoundManager {
     }
   }
 
-  async setMusic(sound, keepCurrentMusic) {
+  async setMusic(sound, keepCurrentMusic, important = false) {
+    if (this.importantMusicPlaying && !important) {
+      console.log('Tried to update music but important music is already playing.');
+      return;
+    }
+
     if (!this.fetchingMusic && !this.cutscene) {
       if (!keepCurrentMusic) {
         this.currentMusic = sound;
@@ -6162,20 +8223,41 @@ class SoundManager {
 
       if (this.masterVolume !== 0) {
         this.fetchingMusic = true;
-        const response = await fetch(
-          `${this.baseUrl}${sound}.${this.fileFormat}`,
-        );
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await this.music.decodeAudioData(arrayBuffer);
-
-        this.musicSource = this.music.createBufferSource();
-        this.musicSource.buffer = audioBuffer;
+        this.musicElement = new Audio(`${this.baseUrl}${sound}.${this.fileFormat}`);
+        this.musicElement.loop = true;
+        this.musicSource = this.music.createMediaElementSource(this.musicElement);
         this.musicSource.connect(this.musicGainNode);
-        this.musicSource.loop = true;
-        this.musicSource.start();
-
+        this.musicElement.play();
+    
         this.fetchingMusic = false;
+        this.importantMusicPlaying = important;
       }
+
+      // if (this.masterVolume !== 0) {
+      //   this.fetchingMusic = true;
+      //   const response = await fetch(
+      //     `${this.baseUrl}${sound}.${this.fileFormat}`,
+      //   );
+      //   const arrayBuffer = await response.arrayBuffer();
+      //   const audioBuffer = await this.music.decodeAudioData(arrayBuffer);
+
+      //   this.musicSource = this.music.createBufferSource();
+      //   this.musicSource.buffer = audioBuffer;
+      //   this.musicSource.connect(this.musicGainNode);
+      //   this.musicSource.loop = true;
+      //   this.musicSource.start();
+
+      //   this.fetchingMusic = false;
+      //   this.importantMusicPlaying = important;
+      // }
+    }
+  }
+
+  pauseMusic(start) {
+    if (this.musicElement) {
+      this.musicElement.pause();
+      if (start) return;
+      localStorage.setItem('musicPaused', true);
     }
   }
 
@@ -6194,15 +8276,10 @@ class SoundManager {
     }
   }
 
-  resumeMusic(paused) {
-    if (this.musicSource) {
-      // Resetting the music since an AudioBufferSourceNode can only
-      // have 'start()' called once
-      if (paused) {
-        this.setMusic('pause_beat', true);
-      } else {
-        this.setMusic(this.currentMusic);
-      }
+  resumeMusic() {
+    if (this.musicElement) {
+      this.musicElement.play();
+      localStorage.setItem('musicPaused', false);
     }
   }
 
@@ -6217,7 +8294,16 @@ class SoundManager {
 
   stopMusic() {
     if (this.musicSource) {
-      this.musicSource.stop();
+      if (this.musicElement) {
+        this.musicElement.pause();
+        this.musicElement.currentTime = 0;
+        this.musicSource.disconnect();
+        this.musicSource = null;
+        this.musicElement = null;
+
+        this.importantMusicPlaying = false;
+        this.paused = true;
+      }
     }
   }
 }

@@ -100,14 +100,15 @@
       "fudder3": "roach3",
       "fudder4": "roach4"
       },
-      "fudder1Health": 150,
-      "fudderHealth": 100,
+      "fudder1Health": 250,
+      "fudderHealth": 150,
+      "intro": "astroport_anarchy",
       "cutscenes": {
-        "cutscene1": "astroport_antics",
-        "cutscene2": "1s1",
-        "cutscene3": "1s2",
-        "cutscene4": "1s3",
-        "cutscene5": "1s4"
+        "cutscene1": "1s1",
+        "cutscene2": "1s2",
+        "cutscene3": "1s3",
+        "cutscene4": "1s4",
+        "cutscene5": "1s5"
       },
       "mobileCutscenes": {
         "cutscene1": "1s0mobile",
@@ -117,11 +118,11 @@
         "cutscene5": "1s4mobile"
       },
       "cutsceneText": {
-        "cutscene1": "...",
-        "cutscene2": "Huh... what's going on?",
-        "cutscene3": "Looks like someone's attacking the LUNC mothership!",
-        "cutscene4": "Cockroaches: Give it up LUNCMAN, your precious LUNC is destined to fail.",
-        "cutscene5": "You'll never stop the power of LUNC you motherFudders!"
+        "1s1": "Mama mia, what's going on?",
+        "1s2": "I dont believe it! Someone thinks they can attack LUNC under my watch",
+        "1s3": "I'd never let anyone hurt LUNC!",
+        "1s4": " Give it up LUNCMAN, your precious LUNC is destined to fail",
+        "1s5": "Its time you dirty mutherfudders got luncpilled"
       }
     }
 }

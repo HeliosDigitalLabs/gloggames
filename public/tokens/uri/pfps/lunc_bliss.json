@@ -1,0 +1,16 @@
+{
+    "name": "Smiling Lunc",
+    "description": "lunc pfp",
+    "type": "pfp",
+    "rarity": "esoteric",
+    "rarityColor": "#ffd418",
+    "previewImg": "/pfps/smiling_lunc/smiling_lunc",
+    "mainImg": "/pfps/smiling_lunc/smiling_lunc_pfp",
+    "showcase": "/token_images/pfps/smiling_lunc/smiling_lunc.webm",
+    "glazed": "/pfps/smiling_lunc/glazed_smiling_lunc.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/pfps/lunc_bliss.json"
+  }

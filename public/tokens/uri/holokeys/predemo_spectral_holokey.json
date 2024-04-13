@@ -1,0 +1,14 @@
+{
+    "name": "Predemo Holokey",
+    "description": "Used to open a spectral Glochip.",
+    "type": "key",
+    "rarity": "spectral",
+    "previewImg": "/holokeys/spectral_holokey_preview",
+    "mainImg": "/holokeys/spectral_holokey_preview",
+    "showcase": "/token_images/holokeys/predemo_spectral_key.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/holokeys/predemo_spectral_holokey.json"
+  }

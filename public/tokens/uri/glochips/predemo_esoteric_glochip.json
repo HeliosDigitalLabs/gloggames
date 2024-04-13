@@ -1,0 +1,14 @@
+{
+    "name": "Predemo Glochip",
+    "description": "An esoteric Glochip.",
+    "type": "glochip",
+    "rarity": "esoteric",
+    "previewImg": "/glochips/esoteric_glochip_preview",
+    "mainImg": "/glochips/esoteric_glochip_preview",
+    "showcase": "/token_images/glochips/predemo_esoteric_glochip.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/glochips/predemo_esoteric_glochip.json"
+  }

@@ -1,0 +1,14 @@
+{
+    "name": "Predemo Holokey",
+    "description": "Used to open an esoteric Glochip.",
+    "type": "key",
+    "rarity": "esoteric",
+    "previewImg": "/holokeys/esoteric_holokey_preview",
+    "mainImg": "/holokeys/esoteric_holokey_preview",
+    "showcase": "/token_images/holokeys/predemo_esoteric_key.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/holokeys/predemo_esoteric_holokey.json"
+  }

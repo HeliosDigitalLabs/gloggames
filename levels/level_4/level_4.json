@@ -145,13 +145,14 @@
     "fudder3": "sam",
     "fudder4": "ryan"
     },
-    "fudder1Health": 150,
-    "fudderHealth": 100,
+    "fudder1Health": 250,
+    "fudderHealth": 150,
     "cutscenes": {
       "cutscene1": "4s1",
       "cutscene2": "4s2",
       "cutscene3": "4s3",
-      "cutscene4": "4s4"
+      "cutscene4": "4s4",
+      "cutscene5": "4s5"
     },
     "mobileCutscenes": {
       "cutscene1": "4s1mobile",
@@ -160,11 +161,12 @@
       "cutscene4": "4s4mobile"
     },
     "cutsceneText": {
-      "cutscene1": "...",
-      "cutscene2": "Who's dumping now?",
-      "cutscene3": "1) what",
-      "cutscene4": "I'll buy as much LUNC as you have, right now. Sell me all you want. Then go FUD off."
+      "4s1": "Speaking of bahamas...",
+      "4s2": "Wait a minute, some of that lunc is mine",
+      "4s3": "Ah, my apologies, Luncman,but there are customer funds awaiting their turn to be offloaded. You just happen to be in the line of fire—regrettable, indeed, but it's all for the greater good, you see",
+      "4s4": "You fool, you cant use LUNC against me. Try and sell me all you got then go fud off",
+      "4s5": "1) what"
     }
   },
-  "nextLevel": 1
+  "nextLevel": 0
 }

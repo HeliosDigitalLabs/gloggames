@@ -13,7 +13,7 @@ if not scene.camera:
 camera = scene.camera
 
 # Get the camera's matrix world
-camera_matrix_world = camera.matrix_world
+camera_matrix_world = camera.matrix_world 
 
 # Get the camera's parameters
 camera_params = camera.data

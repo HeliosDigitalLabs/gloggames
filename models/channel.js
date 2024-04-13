@@ -25,6 +25,22 @@ const gameStatsSchema = new mongoose.Schema({
     levelsPlayed: Number
 });
 
+// Sub-schema for ranks
+const ranksSchema = new mongoose.Schema({
+    luncRank: Number,
+    levelRank: Number  
+});
+
+// Sub-schema for activeNfts
+const activeNftsSchema = new mongoose.Schema({
+    pfp: String,
+    glotag: String,
+    arcade: String,
+    luncman: String,
+    victory: String,
+    reactions: [String]
+});
+
 const channelSchema = new mongoose.Schema({
     walletID:{
         type:String,
@@ -54,10 +70,6 @@ const channelSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
-    tickets: {
-        type: [String],
-        default: 0
-    },
     friends: {
         type: [String], // Placeholder, Array of friend IDs or names
         default: []
@@ -70,10 +82,6 @@ const channelSchema = new mongoose.Schema({
         type: [String],
         default: []
     },    
-    pfp: {
-        type: String, // Placeholder, Could be a URL or file path
-        default: '/style/graphics/pfp.png'
-    },
     settings: {
         type: [String], // Placeholder, can later be an array of subdocuments
         default: []
@@ -85,10 +93,23 @@ const channelSchema = new mongoose.Schema({
     achievements: {
         type: [String], // Placeholder, can later be an array of subdocuments
         default: []
+    },
+    ranks: {
+        type: ranksSchema,
+        default: {}
+    },
+    refreshToken: {
+        type: String,
+        default: null
+    },
+    activeNfts: {
+        type: activeNftsSchema,
+        default: {}
     }
 });
 
 channelSchema.plugin(uniqueValidator);
+channelSchema.index({ highscore: -1, gloLvl: -1 });
 
 const ChannelModel = mongoose.model("Leaderboard", channelSchema)
 

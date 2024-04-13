@@ -1,0 +1,16 @@
+{
+    "name": "Tropical Beach",
+    "description": "A tropical beach background for your arcade!",
+    "type": "arcade",
+    "rarity": "spectral",
+    "rarityColor": "#7b03b5",
+    "previewImg": "/arcades/tropical_beach/tropical_beach",
+    "mainImg": "/arcades/tropical_beach/tropical_beach",
+    "showcase": "/token_images/arcades/tropical_beach/tropical_beach.webm",
+    "glazed": "/arcades/tropical_beach/glazed_tropical_beach.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/arcades/tropical_beach.json"
+  }

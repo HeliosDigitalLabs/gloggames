@@ -1,16 +1,32 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta name="og:site_name" content="Private Alpha">
+    <meta property="og:title" content="glo" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://glo.games/?refresh=3" />
+    <meta property="og:image" content="https://glo.games/glo-preview.jpg" />
+    <meta property="og:image:alt" content="glo-preview" />
+    <meta property="og:description" content="🕹 crypto arcade." />
+    <meta name="twitter:card" content="summary_large_image">
+
+    <base href="/">
+
+
     <!-- Global site tag (gtag.js) - Google Analytics 
     <script async src='https://www.googletagmanager.com/gtag/js?id=UA-142539004-1'></script> -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/client.js"></script>
+    <script src="/js/client.js?v=1.05"></script>
     <script>
-          window.client = new Client();
-          
-          console.log('client:', window.client);
+      window.client = new Client();
+      console.log('client:', window.client);
+      
+      <% if (typeof data !== 'undefined') { %>
+        window.parsedListingData = <%- JSON.stringify(data) %>;
+        console.log('parsedListing:', window.parsedListingData);
+      <% } %>
     </script>
-    <script src="js/router.js"></script>
+    <script src="/js/router.js"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
@@ -24,10 +40,12 @@
     <link href='https://fonts.googleapis.com/icon?family=Material+Icons'
       rel='stylesheet'>
     <link href="https://fonts.googleapis.com/css2?family=Gabarito&display=swap" rel="stylesheet">
-    </head>
-    <title>Luncman</title>
+    <!-- </head> -->
+    <title>🕹 crypto arcade</title>
     <meta name="viewport" content="user-scalable=no, maximum-scale=1, minimum-scale=1, width=device-width, initial-scale=1">
-    <link rel="preload" href="/style/scss/retro_cover.webp" as="image">
+    <!-- 100% privacy-first analytics -->
+    <script async defer src="https://api.glo.games/latest.js"></script>
+    <noscript><img src="https://api.glo.games/noscript.gif" alt="" referrerpolicy="no-referrer-when-downgrade" /></noscript>
   </head>
 
   <body>
@@ -36,14 +54,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Flip.min.js"></script>      
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
-    <script src="js/home.js" defer></script> 
-    <script src="js/nft.js" defer></script>
-    <script src="js/leaderboard.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.5.1/ScrollTrigger.min.js"></script>
+    <script src="/js/home.js?v=1.04" defer></script> 
+    <script src='/js/luncman.js?v=1.03'></script>
+    <script src="/js/nft.js?v=1.03" defer></script>
+    <script src="/js/leaderboard.js?v=1.03" defer></script>
 
-    <div id="retro-cover">
-
-    </div>
+    
       <div id="content-container">
+        <div id="retro-cover" class="retro-cover"></div>
 
         <div id="luncman-div">
         <svg viewBox="0 0 300 200" xmlns='http://www.w3.org/2000/svg'>
@@ -90,26 +109,22 @@
         <div id='main-menu-container' class='main-menu-container'>
           <div id="canvas"></div>
         </div>
-
-        <!-- other content pages-->
-        <div id="credits-section" style="display: none;">CREDITS CONTENT</div>
-        <div id="nfts-section" style="display: none;">NFTS CONTENT</div>
-        <div id="leaderboard-section" style="display: none;">LEADERBOARD CONTENT</div>
-        <div id="about-section" style="display: none;">ABOUT CONTENT</div>
         <div id='game-start'></div>
+        <div style="display: none;" class="CreditSelect" full-bleed id="root"></div>
 
-        
         <!-- header buttons-->
         <div id='header-buttons' class='header-buttons'>
-          <button>
-            <i id='pause-button' class='material-icons'>
-              pause
-            </i>
-          </button>
-          <button>
-            <i id='sound-button' class='material-icons'></i>
-          </button>
+          <div id="sound-control" class="sound-control">
+            <button id='pause-button'>
+              <img id='pause-icon' src='/style/graphics/sound_pause.webp' alt='Music Pause' />
+            </button>
+            <button id='sound-button'>
+              <img id='volume-icon' src='/style/graphics/volume_on.webp' alt='Volume' />
+            </button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1" style="display:none;" />
+          </div>
         </div>
+        
 
         <div id='paused-text' class='paused-text'>
           PAUSED
@@ -159,7 +174,7 @@
                 <div id='fudder-1' class='fudder-name'></div>
                 <div class="fudder-image" id="fudder-image-1"></div>
               </div>
-              <div class="healthbar">
+              <div class="healthbar" id="healthbar1">
                 <div class="health-bar-fill" id="fudder1-health-bar"></div>
               </div>
             </div>   
@@ -168,7 +183,7 @@
                 <div id='fudder-2' class='fudder-name'></div>
                 <div class="fudder-image" id="fudder-image-2"></div>
               </div>
-              <div class="healthbar">
+              <div class="healthbar" id="healthbar2">
                 <div class="health-bar-fill" id="fudder2-health-bar"></div>
               </div>
             </div> 
@@ -177,7 +192,7 @@
                 <div id='fudder-3' class='fudder-name'></div>
                 <div class="fudder-image" id="fudder-image-3"></div>
               </div>
-              <div class="healthbar">
+              <div class="healthbar" id="healthbar3">
                 <div class="health-bar-fill" id="fudder3-health-bar"></div>
               </div>
             </div> 
@@ -186,7 +201,7 @@
                 <div id='fudder-4' class='fudder-name'></div>
                 <div class="fudder-image" id="fudder-image-4"></div>
               </div>
-              <div class="healthbar">
+              <div class="healthbar" id="healthbar4">
                 <div class="health-bar-fill" id="fudder4-health-bar"></div>
               </div>
             </div> 
@@ -234,22 +249,21 @@
       </div>
     </div>
     <div id="root"></div>
-        <script src="js/app.js"></script>
-        <script src='js/luncman.js'></script>
-        <script crossorigin src="https://unpkg.com/@terra-money/feather.js/dist/bundle.js"></script>
+        <script src="/js/app.js?v=1.19.8"></script>
+        <script crossorigin type="module" src="https://unpkg.com/@terra-money/feather.js/dist/bundle.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/dat.gui"></script>
-        <script src="build/static/js/2.6b5741a6.chunk.js"></script>
-        <script src="build/static/js/main.0db08a51.chunk.js"></script>
-        <script src="build/static/js/runtime-main.00a3aed7.js"></script>
-        <script src="js/mobile/mobile.js"></script>
+        <script src="build/static/js/2.b5ac6ea1.chunk.js"></script>
+        <script src="build/static/js/main.caad2620.chunk.js"></script>
+        <script src="build/static/js/runtime-main.e65d325b.js"></script>
+        <script src="/js/mobile/mobile.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
         </div>
         <!-- Credits Page -->
         <div id="credit-section" class="creditSection">
           <button id="close-credit-section">Back</button>
         </div>
-    </div>
+    </div> 
 
     <script>
       const landscapeCover = document.getElementById('landscape-cover');

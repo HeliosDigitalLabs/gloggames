@@ -1,0 +1,17 @@
+{
+    "name": "Normal",
+    "description": "normal reactions",
+    "type": "reactions",
+    "rarity": "generic",
+    "rarityColor": "#8c8c8c",
+    "previewImg": "/reactions/normal/normal",
+    "mainImg": "/reactions/normal/normal",
+    "showcase": "/token_images/reactions/normal/normal.webm",
+    "glazed": "/reactions/normal/glazed_normal.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/reactions/normal.json",
+    "reactions": ["angry", "wink", "lol", "hearteyes", "surprised"]
+  }

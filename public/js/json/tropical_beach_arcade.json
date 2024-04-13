@@ -1,0 +1,174 @@
+{
+    "videoWidth": 4550,
+    "videoHeight": 1080,
+    "imgBase": "./js/background/",
+    "videos": [
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/preload_loop",
+        "loop": true,
+        "preload": false,
+        "transitions": {
+          "home": "preload_home",
+          "leaderboard": "preload_home",
+          "luncman": "preload_home",
+          "nft": "preload_home",
+          "mint": "printer_glomint",
+          "marketplace": "printer_glomart"
+        },
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/preload_home",
+        "loop": false,
+        "preload": true,
+        "transitions": ["home_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/home_luncman",
+        "loop": false,
+        "preload": true,
+        "transitions": ["luncman_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/home_loop",
+        "loop": true,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": true
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/luncman_loop",
+        "loop": true,
+        "preload": true,
+        "transitions": ["luncman_home", "luncman_game"],
+        "setElements": true
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/luncman_home",
+        "loop": false,
+        "preload": true,
+        "transitions": ["home_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/home_leaderboard",
+        "loop": false,
+        "preload": true,
+        "transitions": ["leaderboard_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/leaderboard_loop",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/leaderboard_home",
+        "loop": false,
+        "preload": true,
+        "transitions": ["home_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/printer_loop",
+        "loop": true,
+        "preload": true,
+        "transitions": ["luncman_loop", "home_loop"],
+        "setElements": true
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/home_printer",
+        "loop": false,
+        "preload": true,
+        "transitions": ["printer_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/printer_home",
+        "loop": false,
+        "preload": true,
+        "transitions": ["home_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/printer_glomart",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/glomart_printer",
+        "loop": false,
+        "preload": true,
+        "transitions": ["printer_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/printer_glomint",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/glomint_printer",
+        "loop": false,
+        "preload": true,
+        "transitions": ["printer_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/glomint_laser",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/laser_print_generic",
+        "loop": false,
+        "preload": false,
+        "transitions": ["laser_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/laser_print_esoteric",
+        "loop": false,
+        "preload": false,
+        "transitions": ["laser_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/laser_print_spectral",
+        "loop": false,
+        "preload": false,
+        "transitions": ["laser_loop"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/laser_glomint",
+        "loop": false,
+        "preload": true,
+        "transitions": ["none"],
+        "setElements": false
+      },
+      {
+        "path": "./js/background/arcade_videos/tropical_beach/laser_loop",
+        "loop": true,
+        "preload": true,
+        "transitions": ["printer_loop", "home_loop"],
+        "setElements": false
+      }
+    ],
+    "screenWidth": 1192,
+    "screenHeight": 900,
+    "navbarWidth": 338,
+    "navbarHeight": 312,
+    "minTop": 38
+  }
+  

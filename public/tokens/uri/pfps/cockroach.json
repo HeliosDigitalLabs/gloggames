@@ -1,0 +1,16 @@
+{
+    "name": "Cockroach",
+    "description": "cockroach pfp",
+    "type": "pfp",
+    "rarity": "generic",
+    "rarityColor": "#8c8c8c",
+    "previewImg": "/pfps/cockroach/cockroach",
+    "mainImg": "/pfps/cockroach/cockroach_pfp",
+    "showcase": "/token_images/pfps/cockroach/cockroach.webm",
+    "glazed": "/pfps/cockroach/glazed_cockroach.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/pfps/cockroach.json"
+  }

@@ -134,25 +134,28 @@
     "fudder3": "pylon",
     "fudder4": "chai"
     },
-    "fudder1Health": 150,
-    "fudderHealth": 100,
+    "fudder1Health": 250,
+    "fudderHealth": 150,
     "cutscenes": {
       "cutscene1": "2s1",
       "cutscene2": "2s2",
       "cutscene3": "2s3",
-      "cutscene4": "2s4"
+      "cutscene4": "2s4",
+      "cutscene5": "2s5"
     },
     "mobileCutscenes": {
       "cutscene1": "2s1mobile",
       "cutscene2": "2s2mobile",
       "cutscene3": "2s3mobile",
-      "cutscene4": "2s4mobile"
+      "cutscene4": "2s4mobile",
+      "cutscene5": "2s5mobile"
     },
     "cutsceneText": {
-      "cutscene1": "I gotta get up there!",
-      "cutscene2": "It looks like the Terra Dapps are malfunctioning and going haywire!",
-      "cutscene3": "Insanity! The dApps I once loved now want to stop me from saving LUNC.",
-      "cutscene4": "Forgive me Lord Kwon for what I must do..."
+      "2s1": "Ha, barely got a scratch on me, now lets see whats going on up there",
+      "2s2": "Hold on, are those the lunc dapps...",
+      "2s3": "Those are definitely the lunc dapps",
+      "2s4": "What are you guys doing? We're friends remember?!",
+      "2s5": "Dear mother lunc, forgive me for what I must do and please have mercy on their code"
     }
   },
   "nextLevel": 3

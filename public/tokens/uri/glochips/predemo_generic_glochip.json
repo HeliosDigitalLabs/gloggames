@@ -1,0 +1,14 @@
+{
+    "name": "Predemo Glochip",
+    "description": "A generic Glochip.",
+    "type": "glochip",
+    "rarity": "generic",
+    "previewImg": "/glochips/generic_glochip_preview",
+    "mainImg": "/glochips/generic_glochip_preview",
+    "showcase": "/token_images/glochips/predemo_generic_glochip.webm",
+    "dimensions": {
+      "mainWidth": "400px",
+      "mainHeight": "400px"
+    },
+    "tokenUri": "https://www.glo.games/tokens/uri/glochips/predemo_generic_glochip.json"
+  }
