@@ -1696,11 +1696,11 @@ class Message {
   }
 
   render() {
-    if (!this.nftsInitialized) {
+    if (this.playerInfo.activeNfts && !this.nftsInitialized) {
       console.log('NFTs not initialized, returning');
       setTimeout(() => this.render(), 50);
     }
-    console.log('rendering')
+    console.log('rendering', this.text, this.username, this.pfp, this.glotag)
     this.messageElement = document.createElement('div');
     this.messageElement.classList.add('message');
     this.messageElement.setAttribute('data-id', this.id);
@@ -2045,7 +2045,6 @@ class Message {
       chatButtonContainer.appendChild(replyButton); // Add reply button to the container
 
       contentContainer.appendChild(textContainer);
-      console.log('appending textcontainer in else');
 
       // Create the '*' button for reaction functionality
       const reactionButton = document.createElement('img');
@@ -2315,7 +2314,6 @@ async importReactions() {
 
   updateReactionDisplay() {
     // Ensure the message element is created first
-    console.log('updating reaction display', this.reactions, this.messageElement);
     if (!this.messageElement) {
       console.log('!this.messageElement');
       this.render();
@@ -2323,7 +2321,6 @@ async importReactions() {
 
     // Find or create the reaction display container element
     if (!this.reactionContainer) {
-      console.log('!this.reactionContainer');
       this.reactionContainer = document.createElement('div');
       this.reactionContainer.classList.add('reaction-display-container');
       this.reactionContainer.style.position = 'absolute';
@@ -2343,7 +2340,6 @@ async importReactions() {
     // Display updated reactions
     Object.entries(this.reactions).forEach(([type, reactionData]) => {
       const count = reactionData.count;
-      console.log("Processing reaction:", type, "with count:", count, "from", reactionData, "using", this.reactions);
       if (count > 0) { // Only display reactions with a count > 0
         const reactionElement = document.createElement('div');
         this.reactionContainer.appendChild(reactionElement);

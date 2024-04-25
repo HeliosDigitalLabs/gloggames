@@ -3042,7 +3042,7 @@ class GameCoordinator {
   }
 
   categorizeLoadedImages(loadedImages, onomatTypes) {
-    console.log('preloaded onomat images', loadedImages.map(img => img.src));
+    // console.log('preloaded onomat images', loadedImages.map(img => img.src));
     const categorizedImages = {};
     Object.keys(onomatTypes).forEach(type => {
       const orderedImages = onomatTypes[type].map(path => {
@@ -3338,7 +3338,6 @@ class GameCoordinator {
           gameCoordRef.remainingSources -= 1;
           loadedSources += 1;
           const percent = 1 - gameCoordRef.remainingSources / totalSources;
-          console.log(`Loaded ${type}:`, source);
           loadingLuncman.style.left = `${percent * containerWidth}px`;
           loadingDotMask.style.width = loadingLuncman.style.left;
   
@@ -3371,7 +3370,6 @@ class GameCoordinator {
   }  
 
   createGameElements(sources, type) {
-    console.log('creating game elements', sources)
     return new Promise((resolve, reject) => {
       let loadedSources = 0;
       let loadedElements = [];
@@ -3389,21 +3387,16 @@ class GameCoordinator {
 
         const preloadDiv = document.getElementById('preload-div');
         preloadDiv.appendChild(element);
-        console.error('readying elements')
 
         const elementReady = () => {
-          console.log('calling elementReady')
           loadedSources += 1;
-          console.log(`Loaded ${type}:`, source);
 
           loadedElements.push(element);
 
           if (loadedSources === sources.length) {
-            console.log('returning loaded video')
             resolve(type === 'video' ? loadedElements[0] : loadedElements);
           }
         };
-        console.log('random shit fuck it')
 
         if (type === 'img') {
           element.onload = elementReady;

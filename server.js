@@ -22,12 +22,27 @@ const axios = require('axios');
 const filePath = path.join(__dirname, 'lookbook_json/season_pre_demo.json');
 const rateLimit = require('express-rate-limit');
 const Joi = require('joi');
+const validator = require('validator');
 
-require('dotenv').config({path: __dirname + '/glo.env'});
+const dotenv = require('dotenv');
+const result = dotenv.config({ path: './glo.env' });
+if (result.error) {
+  throw result.error;
+}
+console.log(result.parsed);
 
-const privateKey = fs.readFileSync('/home/luncman/app_ssl/privkey.pem', 'utf8');
-const certificate = fs.readFileSync('/home/luncman/app_ssl/cert.pem', 'utf8');
-const ca = fs.readFileSync('/home/luncman/app_ssl/chain.pem', 'utf8');
+const privateKey = fs.readFileSync('/etc/letsencrypt/live/glo.games/privkey.pem', 'utf8');
+const certificate = fs.readFileSync('/etc/letsencrypt/live/glo.games/cert.pem', 'utf8');
+const ca = fs.readFileSync('/etc/letsencrypt/live/glo.games/fullchain.pem', 'utf8');
+
+console.log("JWT Secret:", process.env.JWT_SECRET_KEY);
+console.log("Refresh Token Secret:", process.env.REFRESH_TOKEN_SECRET);
+console.log("Session Secret:", process.env.SESSION_SECRET);
+console.log("redis Secret:", process.env.REDIS_SECRET);
+
+console.log('Key exists:', fs.existsSync(privateKey));
+console.log('Cert exists:', fs.existsSync(certificate));
+console.log('CA exists:', fs.existsSync(ca));
 
 const credentials = {
   key: privateKey,
@@ -45,24 +60,28 @@ setInterval(() => {
 const chatRedisClient = new Redis({
   host: 'localhost',
   port: 6379,
+  password: process.env.REDIS_SECRET,
   db: 1,
 });
 
 const gameStateRedisClient = new Redis({
   host: 'localhost',
   port: 6379,
+  password: process.env.REDIS_SECRET,
   db: 2,  // Database 1 for game state
 });
 
 const marketplaceRedisClient = new Redis({
   host: 'localhost',
   port: 6379,
+  password: process.env.REDIS_SECRET,
   db: 3,
 });
 
 const lookbookRedisClient = new Redis({
   host: 'localhost',
   port: 6379,
+  password: process.env.REDIS_SECRET,
   db: 4,
 });
 
@@ -231,24 +250,21 @@ const getActivePlayers = async () => {
 
 // Initialize Express App and HTTP Server
 const app = express();
-
-const server = http.createServer(app);
-// const server = https.createServer(credentials, app);
+const server = https.createServer(credentials, app);
 const io = socketIO(server, {
   cors: {
-    origin: "https://glo.games",
+    origin: ["https://glo.games", "https://localhost"],
     methods: ["GET", "POST"],
-    // allowedHeaders: ["my-custom-header"],
     credentials: true
   }
 }); // Attach Socket.io to the HTTP server
 
 // HTTP redirect to HTTPS
-// const httpApp = express(); // Separate express instance for HTTP
-// httpApp.use((req, res, next) => {
-//     res.redirect(`https://${req.headers.host}${req.url}`);
-// });
-// const httpServer = http.createServer(httpApp);
+const httpApp = express(); // Separate express instance for HTTP
+httpApp.use((req, res, next) => {
+    res.redirect(`https://${req.headers.host}${req.url}`);
+});
+const httpServer = http.createServer(httpApp);
 
 // App Configuration
 app.set('view engine', 'ejs');
@@ -271,6 +287,7 @@ app.use((req, res, next) => {
 });
 
 //rate limiting
+app.set('trust proxy', 1); // trust first proxy
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100 // limit each IP to 100 requests per windowMs
@@ -334,6 +351,166 @@ io.use((socket, next) => {
   verifyAccessToken(accessToken);
 });
 
+// get player nfts schema validation
+const getPlayerNftsSchema = Joi.string().pattern(/^(terra)[a-zA-Z0-9]{39}$/).required().messages({
+  'string.base': 'Invalid type, walletID must be a string',
+  'string.pattern.base': 'Invalid walletID format',
+  'any.required': 'walletID is required',
+});
+
+// get nft metadata schema validation
+const getNftMetadataSchema = Joi.string().min(1).max(100).required().messages({
+  'string.base': 'Token ID must be a string',
+  'string.empty': 'Token ID cannot be empty',
+  'string.min': 'Token ID must be at least 1 character long',
+  'string.max': 'Token ID must be less than 100 characters long',
+  'any.required': 'Token ID is required',
+});
+
+// get pfp metadata schema validation
+const getPfpMetadataSchema = Joi.string().min(1).max(100).required().messages({
+  'string.base': 'Token ID must be a string',
+  'string.empty': 'Token ID cannot be empty',
+  'string.min': 'Token ID must be at least 1 character long',
+  'string.max': 'Token ID must be less than 100 characters long',
+  'any.required': 'Token ID is required',
+});
+
+// get glotag metadata schema validation
+const getGlotagMetadataSchema = Joi.string().min(1).max(100).required().messages({
+  'string.base': 'Token ID must be a string',
+  'string.empty': 'Token ID cannot be empty',
+  'string.min': 'Token ID must be at least 1 character long',
+  'string.max': 'Token ID must be less than 100 characters long',
+  'any.required': 'Token ID is required',
+});
+
+// send message schema validation
+const sendMessageSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'WalletID must be a string',
+    'string.empty': 'WalletID cannot be empty',
+    'any.required': 'WalletID is required',
+  }),
+  username: Joi.string().required().messages({
+    'string.base': 'Username must be a string',
+    'string.empty': 'Username cannot be empty',
+    'any.required': 'Username is required',
+  }),
+  message: Joi.string().min(1).max(500).required().messages({
+    'string.base': 'Message must be a string',
+    'string.empty': 'Message cannot be empty',
+    'string.min': 'Message must be at least 1 character long',
+    'string.max': 'Message must be less than 500 characters long',
+    'any.required': 'Message is required',
+  }),
+  type: Joi.string().valid('reply', 'normal').required().messages({
+    'string.base': 'Type must be a string',
+    'string.empty': 'Type cannot be empty',
+    'any.only': 'Type must be either "reply" or "normal"',
+    'any.required': 'Type is required',
+  }),
+  replyUsername: Joi.string().allow(null, '').optional().messages({
+    'string.base': 'ReplyUsername must be a string',
+  }),
+  replyText: Joi.string().allow(null, '').optional().messages({
+    'string.base': 'ReplyText must be a string',
+  }),
+  reactions: Joi.object().pattern(
+    Joi.string(),
+    Joi.object({
+      count: Joi.number().integer().min(0).required(),
+      users: Joi.array().items(Joi.string()).required(),
+      name: Joi.string().required(),
+    })
+  ).optional().messages({
+    'object.base': 'Reactions must be an object',
+  }),
+});
+
+// delete message schema validation
+const deleteMessageSchema = Joi.object({
+  id: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'Message ID must be a string',
+    'string.empty': 'Message ID cannot be empty',
+    'string.min': 'Message ID must be at least 1 character long',
+    'string.max': 'Message ID must be less than 100 characters long',
+    'any.required': 'Message ID is required',
+  }),
+  username: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'Username must be a string',
+    'string.empty': 'Username cannot be empty',
+    'string.min': 'Username must be at least 1 character long',
+    'string.max': 'Username must be less than 100 characters long',
+    'any.required': 'Username is required',
+  }),
+  // Add other fields as needed
+});
+
+// react message schema validation
+const reactMessageSchema = Joi.object({
+  id: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'Message ID must be a string',
+    'string.empty': 'Message ID cannot be empty',
+    'string.min': 'Message ID must be at least 1 character long',
+    'string.max': 'Message ID must be less than 100 characters long',
+    'any.required': 'Message ID is required',
+  }),
+  reaction: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'Reaction must be a string',
+    'string.empty': 'Reaction cannot be empty',
+    'string.min': 'Reaction must be at least 1 character long',
+    'string.max': 'Reaction must be less than 100 characters long',
+    'any.required': 'Reaction is required',
+  }),
+  walletID: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'Wallet ID must be a string',
+    'string.empty': 'Wallet ID cannot be empty',
+    'string.min': 'Wallet ID must be at least 1 character long',
+    'string.max': 'Wallet ID must be less than 100 characters long',
+    'any.required': 'Wallet ID is required',
+  }),
+  nftName: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'NFT Name must be a string',
+    'string.empty': 'NFT Name cannot be empty',
+    'string.min': 'NFT Name must be at least 1 character long',
+    'string.max': 'NFT Name must be less than 100 characters long',
+    'any.required': 'NFT Name is required',
+  }),
+  // Add other fields as needed
+});
+
+// get marketplace data schema validation
+const getMarketplaceDataSchema = Joi.object({
+  filter: Joi.object({
+    name: Joi.string().min(1).max(100).optional().messages({
+      'string.base': 'Filter name must be a string',
+      'string.empty': 'Filter name cannot be empty',
+      'string.min': 'Filter name must be at least 1 character long',
+      'string.max': 'Filter name must be less than 100 characters long',
+    }),
+    type: Joi.string().min(1).max(100).optional().messages({
+      'string.base': 'Filter type must be a string',
+      'string.empty': 'Filter type cannot be empty',
+      'string.min': 'Filter type must be at least 1 character long',
+      'string.max': 'Filter type must be less than 100 characters long',
+    }),
+  }).optional(),
+  // Add other fields as needed
+});
+
+// search schema validation
+const searchSchema = Joi.object({
+  searchTerm: Joi.string().min(1).max(100).required().messages({
+    'string.base': 'Search term must be a string',
+    'string.empty': 'Search term cannot be empty',
+    'string.min': 'Search term must be at least 1 character long',
+    'string.max': 'Search term must be less than 100 characters long',
+    'any.required': 'Search term is required',
+  }),
+  // Add other fields as needed
+});
+
 io.on('connection', (socket) => {
   console.log('User connected');
   clients.push(socket);
@@ -394,7 +571,7 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('get_client_nfts', async (data) => {
+  socket.on('get_client_nfts', async () => {
     console.log('fetching client nfts')
     try {
       if (!socket.decoded) {
@@ -412,8 +589,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_player_nfts', async (data) => {
+    // Validate the message
+    const { error, value } = getPlayerNftsSchema.validate(data);
+    if (error) {
+      console.log('get_player_nfts Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid message format' });
+      return;
+    }
+
     try {
-      const walletID = data;
+      const walletID = validator.escape(value); // value is directly the walletID now
 
       // Call serveClientNfts and emit the result
       const clientNfts = await serveClientNfts(walletID);
@@ -425,8 +610,16 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_nft_metadata', async (data) => {
+    // Validate the token ID
+    const { error, value } = getNftMetadataSchema.validate(data);
+    if (error) {
+      console.log('get_nft_metadata Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid token ID format' });
+      return;
+    }
+  
     try {
-      const tokenId = data;
+      const tokenId = validator.escape(value); // Use the sanitized and validated value
       const metadata = await getNftMetadata(tokenId);
       if (metadata) {
         socket.emit('return_metadata', metadata);
@@ -440,9 +633,17 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_pfp_metadata', async (data) => {
-    console.log('fetching metadata for', data)
+    // Validate the token ID
+    const { error, value } = getPfpMetadataSchema.validate(data);
+    if (error) {
+      console.log('get_pfp_metadata Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid token ID format' });
+      return;
+    }
+  
+    console.log('fetching metadata for', value) // Use the validated value
     try {
-      const tokenId = data;
+      const tokenId = validator.escape(value); // Use the sanitized and validated value
       const metadata = await getNftMetadata(tokenId);
       if (metadata) {
         socket.emit('return_pfp_metadata', metadata);
@@ -456,9 +657,17 @@ io.on('connection', (socket) => {
   });
 
   socket.on('get_glotag_metadata', async (data) => {
-    console.log('fetching glotag metadata for', data)
+    // Validate the token ID
+    const { error, value } = getGlotagMetadataSchema.validate(data);
+    if (error) {
+      console.log('get_glotag_metadata Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid token ID format' });
+      return;
+    }
+  
+    console.log('fetching glotag metadata for', value) // Use the validated value
     try {
-      const tokenId = data;
+      const tokenId = validator.escape(value); // Use the sanitized and validated value
       const metadata = await getNftMetadata(tokenId);
       if (metadata) {
         console.log('returning glotag metadata', metadata)
@@ -516,6 +725,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_message', async (data) => {
+    // Validate the message data
+    const { error, value } = sendMessageSchema.validate(data);
+    if (error) {
+      console.log('Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid message format' });
+      return;
+    }
+
     console.log('chatter:', socket.decoded);
     try {
       if (!socket.decoded) {
@@ -523,14 +740,14 @@ io.on('connection', (socket) => {
       }
       // Assign a unique ID to each message
       const messageId = `chat_message_${new Date().getTime()}`;
-      data.id = messageId;
-      data.timestamp = new Date().toISOString();
-
+      value.id = validator.escape(messageId); // Use the sanitized and validated value
+      value.timestamp = validator.escape(new Date().toISOString()); // Use the sanitized and validated value
+  
       // Store the message data in a Redis hash
-      await chatRedisClient.hset('chat_messages', messageId, JSON.stringify(data));
-
+      await chatRedisClient.hset('chat_messages', messageId, JSON.stringify(value)); // Use the sanitized and validated value
+  
       // Add the message ID to a Redis Sorted Set with the timestamp as the score
-      const timestamp = new Date(data.timestamp).getTime();
+      const timestamp = new Date(value.timestamp).getTime(); // Use the sanitized and validated value
       await chatRedisClient.zadd('chat_message_ids', timestamp, messageId);
 
       // Check if the 'chat_messages' hash will exceed 1000 elements
@@ -581,8 +798,8 @@ io.on('connection', (socket) => {
       }
 
       // Emit the message to all clients, including the sender
-      console.log('sending new message', data)
-      io.emit('new_message', data);
+      console.log('sending new message', value) // Use the validated value
+      io.emit('new_message', value); // Use the validated value
     } catch (err) {
       console.error('Error storing message in Redis:', err);
       socket.emit('error', { message: 'Error sending message.' });
@@ -590,26 +807,37 @@ io.on('connection', (socket) => {
   });
   
   socket.on('delete_message', async (data) => {
+    // Validate the message data
+    const { error, value } = deleteMessageSchema.validate(data);
+    if (error) {
+      console.log('Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid message format' });
+      return;
+    }
+  
     try {
       if (!socket.decoded) {
         return socket.emit('error', 'Authentication error: You must be logged in to do that');
       }
-
+  
+      const messageId = validator.escape(value.id); // Use the sanitized and validated value
+      const username = validator.escape(value.username); // Use the sanitized and validated value
+  
       // Fetch the message with the matching ID from the Redis hash
-      const messageData = JSON.parse(await chatRedisClient.hget('chat_messages', data.id.toString()));
-
+      const messageData = JSON.parse(await chatRedisClient.hget('chat_messages', messageId));
+  
       // Check if the username matches
-      if (messageData && messageData.username === data.username) {
+      if (messageData && messageData.username === username) {
         // Remove the message from the 'chat_messages' hash and the 'chat_message_ids' sorted set
-        await chatRedisClient.hdel('chat_messages', data.id.toString());
-        await chatRedisClient.zrem('chat_message_ids', data.id.toString());
+        await chatRedisClient.hdel('chat_messages', value.id.toString()); // Use the validated value
+        await chatRedisClient.zrem('chat_message_ids', value.id.toString()); // Use the validated value
 
         // Broadcast a delete confirmation event to all clients
-        io.emit('delete_confirmation', data);
+        io.emit('delete_confirmation', value); // Use the validated value
 
         // Check if the message being deleted is the current pinned message
         const pinnedMessageId = await chatRedisClient.get('pinned_message_id');
-        if (data.id.toString() === pinnedMessageId) {
+        if (value.id.toString() === pinnedMessageId) { // Use the validated value
           // If so, find a new message to pin
           const messageIds = await chatRedisClient.zrange('chat_message_ids', 0, -1);
           for (let i = messageIds.length - 1; i >= 0; i--) {
@@ -638,22 +866,30 @@ io.on('connection', (socket) => {
   });
 
   socket.on('react_message', async (data) => {
-    console.info('reacting to message', data)
+    // Validate the message data
+    const { error, value } = reactMessageSchema.validate(data);
+    if (error) {
+      console.log('react_message Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid message format' });
+      return;
+    }
+  
+    console.info('reacting to message', value) // Use the validated value
     try {
       if (!socket.decoded) {
         return socket.emit('error', 'Authentication error: You must be logged in to do that');
       }
-      const walletID = data.walletID; // Assuming you're sending walletID with the reaction data
-      console.log('reacting to message', data)
-
+      const walletID = validator.escape(value.walletID); // Use the sanitized and validated value
+      console.log('reacting to message', value) // Use the validated value
+  
       // Fetch the message with the matching ID from the 'chat_messages' hash
-      const messageData = JSON.parse(await chatRedisClient.hget('chat_messages', data.id.toString()));
+      const messageData = JSON.parse(await chatRedisClient.hget('chat_messages', validator.escape(value.id.toString()))); // Use the sanitized and validated value
 
       if (messageData) {
         // If the user hasn't reacted with this type, add their reaction
-        if (!messageData.reactions[data.reaction]) {
+        if (!messageData.reactions[value.reaction]) { // Use the validated value
           // If this is the first reaction of this type, initialize the reaction data
-          messageData.reactions[data.reaction] = { count: 0, users: [], name: data.nftName };
+          messageData.reactions[value.reaction] = { count: 0, users: [], name: value.nftName }; // Use the validated value
         }
 
         // Check if the user has already reacted with any type
@@ -663,25 +899,25 @@ io.on('connection', (socket) => {
         }
 
         // Add the user's walletID to the list
-        if (!messageData.reactions[data.reaction].users.includes(walletID)) {
-          messageData.reactions[data.reaction].users.push(walletID);
+        if (!messageData.reactions[value.reaction].users.includes(walletID)) { // Use the validated value
+          messageData.reactions[value.reaction].users.push(walletID);
           // Increment the reaction count
-          messageData.reactions[data.reaction].count += 1;
+          messageData.reactions[value.reaction].count += 1;
         }
 
         // Save the updated message back to Redis
-        await chatRedisClient.hset('chat_messages', data.id.toString(), JSON.stringify(messageData));
+        await chatRedisClient.hset('chat_messages', value.id.toString(), JSON.stringify(messageData)); // Use the validated value
 
         // Broadcast the reaction update to all clients
-        const updatedReaction = { [data.reaction]: messageData.reactions[data.reaction] };
-        io.emit('message_reacted', { id: data.id, reactions: updatedReaction });
+        const updatedReaction = { [value.reaction]: messageData.reactions[value.reaction] }; // Use the validated value
+        io.emit('message_reacted', { id: value.id, reactions: updatedReaction }); // Use the validated value
 
         // Check if this message has more reactions than the current pinned message
         const pinnedMessageId = await chatRedisClient.get('pinned_message_id');
         const pinnedMessageData = JSON.parse(await chatRedisClient.hget('chat_messages', pinnedMessageId));
         if (!pinnedMessageData || messageData.totalReactionCount > pinnedMessageData.totalReactionCount) {
           // If so, update the pinned message
-          await chatRedisClient.set('pinned_message_id', data.id.toString());
+          await chatRedisClient.set('pinned_message_id', value.id.toString()); // Use the validated value
 
           // Retrieve the player info from the 'chatters' hash
           const playerInfo = JSON.parse(await chatRedisClient.hget('chatters', messageData.walletID));
@@ -689,7 +925,7 @@ io.on('connection', (socket) => {
           messageData.playerInfo = playerInfo;
 
           // Emit a new WebSocket message to notify all clients about the new pinned message
-          io.emit('new_pinned_message', { id: data.id, message: messageData });
+          io.emit('new_pinned_message', { id: value.id, message: messageData }); // Use the validated value
         }
       } else {
         console.error('Error: Message not found');
@@ -777,30 +1013,50 @@ io.on('connection', (socket) => {
   });
 
     // Send marketplace data to the newly connected client when needed
-    socket.on('get_marketplace_data', async (data) => {
-      try {
-        let listings;
-        if (data.filter && (data.filter.name || data.filter.type)) {
-          listings = await emitMarketplaceData(data.filter);
-        } else {
-          listings = await emitAllMarketplaceData();
-        }
-        socket.emit('marketplace_data', listings);
-      } catch (err) {
-        console.error('Error fetching marketplace data:', err);
-        socket.emit('error', { message: 'Error fetching marketplace data.' });
-      }
-    });
+  socket.on('get_marketplace_data', async (data) => {
+    // Validate the message data
+    const { error, value } = getMarketplaceDataSchema.validate(data);
+    if (error) {
+      console.log('get_marketplace_data Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid message format' });
+      return;
+    }
 
-    socket.on('search', (searchTerm) => {
-      lookbookRedisClient.zrangebylex('autocomplete', `[${searchTerm.toLowerCase()}*`, `[${searchTerm.toLowerCase()}\xff`, 'LIMIT', 0, 10)
-        .then(matchingKeys => {
-          socket.emit('autocomplete', matchingKeys);
-        })
-        .catch(err => {
-          console.error('Error retrieving keys:', err);
-        });
-    });
+    try {
+      let listings;
+      if (value.filter && (value.filter.name || value.filter.type)) {
+        const sanitizedFilter = {
+          name: value.filter.name ? validator.escape(value.filter.name) : undefined,
+          type: value.filter.type ? validator.escape(value.filter.type) : undefined,
+        };
+        listings = await emitMarketplaceData(sanitizedFilter);
+      } else {
+        listings = await emitAllMarketplaceData();
+      }
+      socket.emit('marketplace_data', listings);
+    } catch (err) {
+      console.error('Error fetching marketplace data:', err);
+      socket.emit('error', { message: 'Error fetching marketplace data.' });
+    }
+  });
+
+  socket.on('search', (data) => {
+    // Validate the search term
+    const { error, value } = searchSchema.validate(data);
+    if (error) {
+      console.log('Validation error:', error.details[0].message);
+      socket.emit('error', { message: 'Invalid search term format' });
+      return;
+    }
+  
+    lookbookRedisClient.zrangebylex('autocomplete', `[${validator.escape(value.searchTerm.toLowerCase())}*`, `[${validator.escape(value.searchTerm.toLowerCase())}\xff`, 'LIMIT', 0, 10) // Use the sanitized and validated value
+      .then(matchingKeys => {
+        socket.emit('autocomplete', matchingKeys);
+      })
+      .catch(err => {
+        console.error('Error retrieving keys:', err);
+      });
+  });
 
   socket.on('paging_lookbook', async () => {
     console.log('Received paging_lookbook event');
@@ -856,6 +1112,7 @@ const lcd = new LCDClient({
 const nftsRedisClient = new Redis({
   host: 'localhost',
   port: 6379,
+  password: process.env.REDIS_SECRET,
   db: 5,
 });
 
@@ -1140,7 +1397,7 @@ async function updateMarketplace() {
 
     return listingsResponse;
   } catch (error) {
-    console.error(`Error during listings query:`, error);
+    // console.error(`Error during listings query:`, error);
     return; // Return an empty array or null to indicate failure
   }
 }
@@ -1277,6 +1534,22 @@ app.get('/', tryGloAccess, (req, res) => {
   res.render('pages/index');
 });
 
+
+//handle presale
+// Basic auth configuration for /presale
+const presaleAuthMiddleware = basicAuth({
+    users: { 'gloguest': 'presalepassword' }, // Replace 'admin' and 'presalepassword' with your desired credentials
+    challenge: true, // This will cause most browsers to show a popup to enter credentials
+    realm: 'Presale',
+});
+
+// Apply basic auth middleware to your /presale route
+app.use('/presale', presaleAuthMiddleware);
+
+app.get('/presale', (req, res) => {
+  res.render('pages/presale'); // Render a different ejs file for /presale
+});
+
 //handle maison
 
 // Basic auth configuration
@@ -1383,16 +1656,43 @@ const getWalletIdFromToken = (req) => {
   }
 };
 
-//api/chatters/username schema validation
+//api/chatters/username schema validation WORKS (iv/s)
+const usernameSchema = Joi.string().alphanum().min(3).max(30).required().messages({
+  'string.base': 'Username must be a string',
+  'string.alphanum': 'Username must only contain alpha-numeric characters',
+  'string.min': 'Username must be at least 3 characters long',
+  'string.max': 'Username must be less than 30 characters long',
+  'any.required': 'Username is required',
+});
+
 app.get('/api/chatters/:username', async (req, res) => {
-  const username = req.params.username;
+  const { error, value } = usernameSchema.validate(req.params.username);
+  if (error) {
+    res.status(400).send(error.details[0].message); 
+    return;
+  }
+
+  const username = validator.escape(value);
   const userInfo = await chatRedisClient.hget('chatters', username);
   res.json(JSON.parse(userInfo));
 });
 
-//update schema validation
+//update schema validation WORKS (iv/s)
+const updateLoginSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'Invalid type, walletID must be a string',
+    'any.required': 'walletID is required',
+  }),
+});
+
 app.post("/updateLogin", async (req, res) => {
-  const address = req.body.walletID;
+  const { error, value } = updateLoginSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  const address = validator.escape(value.walletID);
   req.session.walletID = address; // store user information in session
   console.log(address);
 
@@ -1476,9 +1776,27 @@ app.post("/updateLogin", async (req, res) => {
   });
 });
 
-//new player schema validation
+//new player schema validation WORKS (iv/s)
+const newPlayerSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'Invalid type, walletID must be a string',
+    'any.required': 'walletID is required',
+  }),
+  nickname: Joi.string().required().messages({
+    'string.base': 'Invalid type, nickname must be a string',
+    'any.required': 'nickname is required',
+  }),
+});
+
 app.post("/newplayer", (req, res) => {
-  const { walletID, nickname } = req.body;
+  const { error, value } = newPlayerSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  const walletID = validator.escape(value.walletID);
+  const nickname = validator.escape(value.nickname);
 
   // Create and save the new user
   var channelModel = new ChannelModel();
@@ -1556,10 +1874,28 @@ app.post("/newplayer", (req, res) => {
   });
 });
 
-//update active nft category schema validation
+//update active nft category schema validation WORKS (iv/s)
+const updateActiveNftCategorySchema = Joi.object({
+  label: Joi.string().required().messages({
+    'string.base': 'Invalid type, label must be a string',
+    'any.required': 'label is required',
+  }),
+  baseTokenId: Joi.string().required().messages({
+    'string.base': 'Invalid type, baseTokenId must be a string',
+    'any.required': 'baseTokenId is required',
+  }),
+});
+
 app.post("/updateActiveNftCategory", async (req, res) => {
-  const {label, baseTokenId } = req.body;
-  const { walletID, error } = getWalletIdFromToken(req);
+  const { error, value } = updateActiveNftCategorySchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  const label = validator.escape(value.label);
+  const baseTokenId = validator.escape(value.baseTokenId);
+  const { walletID, error: tokenError } = getWalletIdFromToken(req);
   console.log('walletID', walletID, 'label', label, 'baseTokenId', baseTokenId);
 
   // Find the user with the given walletID and update their activeNfts
@@ -1596,11 +1932,33 @@ app.post("/updateActiveNftCategory", async (req, res) => {
   });
 });
 
-//refresh schema validation
+//refresh schema validation WORKS (iv/s)
+const refreshSchema = Joi.object({
+  refreshToken: Joi.string().required().messages({
+    'string.base': 'Invalid type, refreshToken must be a string',
+    'any.required': 'refreshToken is required',
+  }),
+  token: Joi.string().required().messages({
+    'string.base': 'Invalid type, token must be a string',
+    'any.required': 'token is required',
+  }),
+}).unknown();
+
 app.post('/refresh', (req, res) => {
-  const refreshToken = req.cookies.refreshToken;
-  const accessToken = req.cookies.token;
-  console.log('refreshing for user', refreshToken, accessToken)
+  const cookies = req.cookies;
+  const { error, value } = refreshSchema.validate(cookies);
+
+  console.log('Cookies:', cookies);
+  console.log('/refresh Validation error:', error);
+
+  if (error) {
+    res.status(400).send(error.details[0].message); 
+    return;
+  }
+
+  const refreshToken = validator.escape(value.refreshToken);
+  const token = validator.escape(value.token);
+  console.log('refreshing for user', refreshToken, token)
 
   if (!refreshToken && !accessToken) {
     console.log('User had no tokens')
@@ -1669,17 +2027,41 @@ app.get("/logout", (req, res) => {
   res.send('Logged out');
 });
 
-//accept friend schema validation
+//accept friend schema validation WORKS (iv/s)
+const acceptFriendSchema = Joi.object({
+  friendWalletID: Joi.string().pattern(/^(terra)[a-zA-Z0-9]{39}$/).required().messages({
+    'string.base': 'Invalid type, friendWalletID must be a string',
+    'string.pattern.base': 'Invalid friendWalletID format',
+    'any.required': 'friendWalletID is required',
+  }),
+  response: Joi.string().valid('yes', 'no').required().messages({
+    'string.base': 'Invalid type, response must be a string',
+    'any.only': 'response must be either "yes" or "no"',
+    'any.required': 'response is required',
+  }),
+});
+
 app.post("/acceptfriend", (req, res) => {
-  const { userAddress, error } = getWalletIdFromToken(req);
-  const friendAddress = req.body.friendWalletID;
-  const userResponse = req.body.response; // 'yes' or 'no'
+  const { error } = acceptFriendSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+  console.log('Request body:', req.body); // log the request body
+
+  const { walletID, error: tokenError } = getWalletIdFromToken(req);
+  console.log('User address:', walletID); // log the user address
+
+  const friendAddress =  validator.escape(req.body.friendWalletID);
+  console.log('Friend address:', friendAddress); // log the friend address
+
+  const userResponse =  validator.escape(req.body.response); // 'yes' or 'no'
+  console.log('User response:', userResponse); // log the user respo
 
   if (!["yes", "no"].includes(userResponse)) {
     return res.status(400).json({ error: "Invalid response value." });
   }
 
-  ChannelModel.findOne({ walletID: userAddress }, (err, user) => {
+  ChannelModel.findOne({ walletID: walletID }, (err, user) => {
     if (err) return res.status(500).json({ error: 'Error finding user' });
     if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -1695,11 +2077,11 @@ app.post("/acceptfriend", (req, res) => {
       if (!friend) return res.status(404).json({ error: 'Friend not found' });
 
       // Always remove the user from the friend's friendRequestsSent array, regardless of 'yes' or 'no' response
-      friend.friendRequestsSent = friend.friendRequestsSent.filter(address => address !== userAddress);
+      friend.friendRequestsSent = friend.friendRequestsSent.filter(address => address !== walletID);
 
       if (userResponse === "yes") {
         user.friends.push(friendAddress);
-        friend.friends.push(userAddress);
+        friend.friends.push(walletID);
         user.save();
         friend.save();
         return res.json({ message: 'Friend added successfully' });
@@ -1714,13 +2096,42 @@ app.post("/acceptfriend", (req, res) => {
 });
 
 
-//request friend schema validation
+//request friend schema validation WORKS (iv/s)
+const requestFriendSchema = Joi.object({
+  headers: Joi.object({
+    'content-type': Joi.string().valid('application/json').required().messages({
+      'string.base': 'Invalid type, content-type must be a string',
+      'any.only': 'Invalid content-type, must be application/json',
+      'any.required': 'content-type is required',
+    }),
+  }).unknown(true), // allow unknown headers
+  body: Joi.object({
+    friendWalletID: Joi.string().pattern(/^(terra)[a-zA-Z0-9]{39}$/).required().messages({
+      'string.base': 'Invalid type, friendWalletID must be a string',
+      'string.pattern.base': 'Invalid friendWalletID format',
+      'any.required': 'friendWalletID is required',
+    }),
+  }),
+});
+
 app.post("/requestfriend", (req, res) => {
-  const { userAddress, error } = getWalletIdFromToken(req);
-  const friendAddress = req.body.friendWalletID;  // the walletID of the friend receiving the request
+  console.log('reqieum for  a dream', req.body); // log the request body
+const { error, value } = requestFriendSchema.validate({ headers: req.headers, body: req.body });
+if (error) {
+  console.log('Validation error:', error);
+  res.status(400).send(error.details[0].message);
+  return;
+}
+  console.log('req.headers:', req.headers);
+  console.log('req.cookies:', req.cookies);
+  const { walletID, error: tokenError } = getWalletIdFromToken(req);
+  console.log('walletID:', walletID);  // Log the walletID
+
+  const friendAddress = validator.escape(req.body.friendWalletID);  // the walletID of the friend receiving the request
+  console.log('friendAddress:', friendAddress);
 
   // First, find the user in the database using their walletID
-  ChannelModel.findOne({ walletID: userAddress }, (err, user) => {
+  ChannelModel.findOne({ walletID: walletID }, (err, user) => {
       if (err) {
           console.log('Error finding user:', err);
           return res.status(500).json({ error: 'Error finding user' });
@@ -1759,7 +2170,7 @@ app.post("/requestfriend", (req, res) => {
           }
 
           // Add the user's walletID to the friend's friendRequestsReceived array
-          friend.friendRequestsReceived.push(userAddress);
+          friend.friendRequestsReceived.push(walletID);
 
           // Save both documents
           user.save();
@@ -1771,9 +2182,24 @@ app.post("/requestfriend", (req, res) => {
   });
 });
  
-//read schema validation
+//read schema validation WORKS
+const readSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'string.base': 'Invalid type, token must be a string',
+    'any.required': 'token is required',
+  }),
+}).unknown();
+
 app.get("/read", async (req, res) => {
-  console.log('cookie:', req.cookies.token);
+  const { error, value } = readSchema.validate(req.cookies);
+  console.log('Cookies:', req.cookies);
+  console.log('/read Validation error:', error);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  console.log('cookie:', value.token);
   try {
     // 1. Extract the JWT from the secured cookie
     const token = req.cookies.token;
@@ -1836,10 +2262,28 @@ app.get("/read", async (req, res) => {
   }
 });
 
-//get player info schema validation
+//get player info schema validation WORKS
+const getPlayerInfoSchema = Joi.object({
+  friends: Joi.array().items(Joi.string().required().messages({
+    'string.base': 'Invalid type, friend must be a string',
+    'any.required': 'friend is required',
+  })).required().messages({
+    'array.base': 'Invalid type, friends must be an array',
+    'any.required': 'friends is required',
+  }),
+});
+
 app.post("/get_player_info", async (req, res) => {
+  console.log('Request body before validation:', req.body);
+  const { error } = getPlayerInfoSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message }); 
+  }
+  console.log('Request body:', req.body); // log the request body
+
   // Extract the token from the request headers or cookies
   const token = req.cookies.token;
+  console.log('Token:', token); // log the token
   
   try {
     if (!token) {
@@ -1889,10 +2333,22 @@ app.post("/get_player_info", async (req, res) => {
   }
 });
 
-//get player schema validation
+//get player schema validation WORKS (iv/s)
+const getPlayerSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'Invalid type, walletID must be a string',
+    'any.required': 'walletID is required',
+  }),
+});
+
 app.post("/get_player", async (req, res) => {
-  // Extract the walletID from the request body
-  const walletID = req.body.walletID;
+  const { error, value } = getPlayerSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message); 
+    return;
+  }
+
+  const walletID = validator.escape(value.walletID);
 
   try {
     if (!walletID) {
@@ -1917,9 +2373,27 @@ app.post("/get_player", async (req, res) => {
   }
 });
 
-//update player schema validation
+//update player schema validation WORKS (iv/s)
+const updatePlayerSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'Invalid type, walletID must be a string',
+    'any.required': 'walletID is required',
+  }),
+  newUsername: Joi.string().required().messages({
+    'string.base': 'Invalid type, newUsername must be a string',
+    'any.required': 'newUsername is required',
+  }),
+});
+
 app.post("/updateplayer", async (req, res) => {
-  const { walletID, newUsername } = req.body;
+  const { error, value } = updatePlayerSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message); 
+    return;
+  }
+
+  const walletID = validator.escape(value.walletID);
+  const newUsername = validator.escape(value.newUsername);
 
   try {
     const updatedPlayer = await ChannelModel.findOneAndUpdate(
@@ -1950,10 +2424,24 @@ app.post("/updateplayer", async (req, res) => {
   }
 });
 
- //highscore schema validation
-  app.get("/highscore", async (req, res) => {
-    const address = req.session.walletID; // Retrieve the address from the session
-    console.log(address);
+ //highscore schema validation WORKS (iv/s)
+const highscoreSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'Invalid type, walletID must be a string',
+    'any.required': 'walletID is required',
+  }),
+});
+
+app.get("/highscore", async (req, res) => {
+  const { error, value } = highscoreSchema.validate(req.session);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  const address = validator.escape(value.walletID);
+
+  console.log(address);
   
     const channel = await ChannelModel.findOne({ walletID: address });
   
@@ -1967,23 +2455,93 @@ app.post("/updateplayer", async (req, res) => {
   });
   
 
- //update schema validation
-  app.post("/update", async (req, res) => {
-    try {
-      console.log('updating player stats', req.body)
-      const {
-        username,
-        address,
-        highestLevel,
-        endTime,
-        score,
-        coinsCollected,
-        fruitCollected,
-        fuddersKilled,
-        attacksUsed,
-        attacksHit,
-        deaths
-      } = req.body;
+ //update schema validation WORKS
+ const updateSchema = Joi.object({
+  username: Joi.string().required().messages({
+    'string.base': 'Invalid type, username must be a string',
+    'any.required': 'username is required',
+  }),
+  address: Joi.string().required().messages({
+    'string.base': 'Invalid type, address must be a string',
+    'any.required': 'address is required',
+  }),
+  highestLevel: Joi.number().required().messages({
+    'number.base': 'Invalid type, highestLevel must be a number',
+    'any.required': 'highestLevel is required',
+  }),
+  endTime: Joi.number().required().messages({
+    'number.base': 'Invalid type, endTime must be a number',
+    'any.required': 'endTime is required',
+  }),
+  score: Joi.number().required().messages({
+    'number.base': 'Invalid type, score must be a number',
+    'any.required': 'score is required',
+  }),
+  coinsCollected: Joi.number().required().messages({
+    'number.base': 'Invalid type, coinsCollected must be a number',
+    'any.required': 'coinsCollected is required',
+  }),
+  fruitCollected: Joi.object({
+    bitcoin: Joi.number().required().messages({
+      'number.base': 'Invalid type, bitcoin must be a number',
+      'any.required': 'bitcoin is required',
+    }),
+    ethereum: Joi.number().required().messages({
+      'number.base': 'Invalid type, ethereum must be a number',
+      'any.required': 'ethereum is required',
+    }),
+    solana: Joi.number().required().messages({
+      'number.base': 'Invalid type, solana must be a number',
+      'any.required': 'solana is required',
+    }),
+    atom: Joi.number().required().messages({
+      'number.base': 'Invalid type, atom must be a number',
+      'any.required': 'atom is required',
+    })
+  }).required().messages({
+    'object.base': 'Invalid type, fruitCollected must be an object',
+    'any.required': 'fruitCollected is required',
+  }),
+  fuddersKilled: Joi.number().required().messages({
+    'number.base': 'Invalid type, fuddersKilled must be a number',
+    'any.required': 'fuddersKilled is required',
+  }),
+  attacksUsed: Joi.number().required().messages({
+    'number.base': 'Invalid type, attacksUsed must be a number',
+    'any.required': 'attacksUsed is required',
+  }),
+  attacksHit: Joi.number().required().messages({
+    'number.base': 'Invalid type, attacksHit must be a number',
+    'any.required': 'attacksHit is required',
+  }),
+  deaths: Joi.number().required().messages({
+    'number.base': 'Invalid type, deaths must be a number',
+    'any.required': 'deaths is required',
+  })
+});
+
+app.post("/update", async (req, res) => {
+  const { error, value } = updateSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  try {
+    console.log('updating player stats', value)
+    const {
+      username,
+      address,
+      highestLevel,
+      endTime,
+      score,
+      coinsCollected,
+      fruitCollected,
+      fuddersKilled,
+      attacksUsed,
+      attacksHit,
+      deaths
+    } = value;
       console.log(fruitCollected);
       console.log('username:', `game:${username}`)
       const gameStateData = await gameStateRedisClient.get(`game:${username}`)
@@ -2148,13 +2706,26 @@ async function mintRewardGlochip(userWalletAddress, performanceCategory) {
   }
 }
 
- //simulate win schema validation
+ //simulate win schema validation WORKS (iv/s)
+ const simulateWinSchema = Joi.object({
+  score: Joi.number().required().messages({
+    'number.base': 'Invalid type, score must be a number',
+    'any.required': 'score is required',
+  }),
+});
+
 app.post('/simulateWin', async (req, res) => {
+  const { error, value } = simulateWinSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message); 
+    return;
+  }
+
   try {
-    const score = req.body.score;
-    const { walletID, error } = getWalletIdFromToken(req);
+    const score = validator.escape(value.score);
+    const { walletID, error: tokenError } = getWalletIdFromToken(req);
     console.log('Checking if', walletID, 'won');
-    if (error) {
+    if (tokenError) {
       return res.status(400).json({ error: "Invalid token" });
     }
     if (!walletID.startsWith('terra')) {
@@ -2204,7 +2775,17 @@ app.post('/simulateWin', async (req, res) => {
   }
 });
 
+//temp ffake win schema validation
+const fakeWinSchema = Joi.object({
+  score: Joi.number().required()
+});
+
 app.post('/fakeWin', async (req, res) => {
+  const { error, value } = fakeWinSchema.validate(req.body);
+  if (error) {
+    res.status(400).send(error.details[0].message); //HERE NIGGA
+    return;
+  }
   try {
     const { walletID, error } = getWalletIdFromToken(req);
     console.log('Faking win for', walletID);
@@ -2252,11 +2833,34 @@ async function getTopHighScore() {
 }
 
 // leaderboard 
- //leaderboard schema validation
+ //leaderboard schema validation WORKS (iv/s)
+ const leaderboardSchema = Joi.object({
+  offset: Joi.number().integer().min(0).messages({
+    'number.base': 'Invalid type, offset must be a number',
+    'number.integer': 'Invalid type, offset must be an integer',
+    'number.min': 'Invalid value, offset must be greater than or equal to 0',
+  }),
+  limit: Joi.number().integer().min(1).max(50).messages({
+    'number.base': 'Invalid type, limit must be a number',
+    'number.integer': 'Invalid type, limit must be an integer',
+    'number.min': 'Invalid value, limit must be greater than or equal to 1',
+    'number.max': 'Invalid value, limit must be less than or equal to 50',
+  }),
+  rankType: Joi.string().valid('luncRank', 'levelRank').messages({
+    'string.base': 'Invalid type, rankType must be a string',
+    'any.only': 'Invalid value, rankType must be either "luncRank" or "levelRank"',
+  }),
+});
+
 app.get("/api/leaderboard", async (req, res) => {
-  const offset = parseInt(req.query.offset) || 0;
-  const limit = Math.min(parseInt(req.query.limit) || 20, 50);
-  const rankType = req.query.rankType || 'luncRank'; // Default to 'scoreRank' if not specified
+  const { error, value } = leaderboardSchema.validate(req.query);
+  if (error) {
+    res.status(400).send(error.details[0].message); 
+    return;
+  }
+  const offset = Number(validator.escape(String(value.offset || 0)));
+  const limit = Number(validator.escape(String(Math.min(value.limit || 20, 50))));
+  const rankType = validator.escape(value.rankType || 'luncRank'); // Default to 'scoreRank' if not specified
 
   try {
       // Adjusting sort and select based on rankType
@@ -2269,7 +2873,7 @@ app.get("/api/leaderboard", async (req, res) => {
           .skip(offset)
           .limit(limit);
 
-      return res.status(200).json(playersSorted);
+      return res.status(200).json(playersSorted); //HERE NI
   } catch (err) {
       console.error("Error retrieving leaderboard:", err);
       return res.status(500).json({ error: "Error retrieving leaderboard" });
@@ -2277,14 +2881,33 @@ app.get("/api/leaderboard", async (req, res) => {
 });
 
 // New endpoint to fetch player's rank and surrounding players
- //my rank schema validation
+ //my rank schema validation WORKS (iv/s)
+ const myRankSchema = Joi.object({
+  walletID: Joi.string().required().messages({
+    'string.base': 'Invalid type, walletID must be a string',
+    'any.required': 'walletID is required',
+  }),
+  rankType: Joi.string().valid('luncRank', 'anotherRankType').messages({
+    'string.base': 'Invalid type, rankType must be a string',
+    'any.only': 'Invalid value, rankType must be either "luncRank" or "anotherRankType"',
+  }),
+});
+
 app.get("/api/myrank", async (req, res) => {
-  const walletID = req.query.walletID; // Changed from req.params to req.query
+  console.log('Request query:', req.query);
+  const { error, value } = myRankSchema.validate(req.query);
+  console.log('Validation error:', error);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  const walletID = validator.escape(value.walletID);
   const range = 6;
 
   try {
     const data = await findPlayerRankAndSurrounding(walletID, range);
-    res.status(200).json(data);
+    res.status(200).json(data); //HERE NIGGA
   } catch (err) {
     console.error("Error retrieving player rank:", err);
     res.status(500).json({ error: "Error retrieving player rank" });
@@ -2313,9 +2936,21 @@ async function findPlayerRankAndSurrounding(walletID, range) {
   .sort({ [`ranks.${rankType}`]: 1 });
 }
 
- //search leaderboard schema validation
+ //search leaderboard schema validation WORKS (iv/s)
+ const searchLeaderboardSchema = Joi.object({
+  startsWith: Joi.string().allow('').default('').messages({
+    'string.base': 'Invalid type, startsWith must be a string',
+  }),
+});
+
 app.get("/api/searchLeaderboard", async (req, res) => {
-  const startsWith = req.query.startsWith || '';
+  const { error, value } = searchLeaderboardSchema.validate(req.query);
+  if (error) {
+    res.status(400).send(error.details[0].message);
+    return;
+  }
+
+  const startsWith = validator.escape(value.startsWith);
 
   try {
       // Adjust the search logic to match names starting with the query
@@ -2323,7 +2958,7 @@ app.get("/api/searchLeaderboard", async (req, res) => {
           nickname: { $regex: '^' + startsWith, $options: 'i' } // Starts with, case-insensitive
       }).select('walletID nickname highscore gloLvl ranks.luncRank ranks.levelRank');
 
-      res.status(200).json(searchResults);
+      res.status(200).json(searchResults); //HERE NIGGA
   } catch (err) {
       console.error("Error retrieving search results:", err);
       res.status(500).json({ error: "Error retrieving search results" });
@@ -2387,8 +3022,11 @@ app.post('/givefeedback', (req, res) => {
 server.listen(8014, () => { // Note: Using `server.listen` instead of `app.listen`
   console.log('Server running on http://localhost:8014');
 });
-// httpServer.listen(8012, () => {
-//     console.log('HTTP Server running on port 8012');
-// });
+server.on('error', (error) => {
+  console.error('HTTPS Server Error:', error);
+});
+httpServer.listen(8012, () => {
+    console.log('HTTP Server running on port 8012');
+});
 
 app.use('/levels', express.static('levels'));

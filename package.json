@@ -43,9 +43,14 @@
     "redis": "^4.6.8",
     "socket.io": "^4.7.2",
     "three-gltf-loader": "^1.111.0",
+    "validator": "^13.11.0",
     "window": "^4.2.7"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-security": "^3.0.0",
+    "globals": "^15.0.0",
     "nodemon": "^2.0.20",
     "webpack": "^5.76.3",
     "webpack-cli": "^5.0.1"
